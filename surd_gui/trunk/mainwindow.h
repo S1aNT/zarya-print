@@ -20,6 +20,8 @@ class QHBoxLayout;
 class QVBoxLayout;
 class QSpacerItem;
 class QErrorMessage;
+class QComboBox;
+class QListWidget;
 QT_END_NAMESPACE
 
 namespace Ui {
@@ -68,22 +70,16 @@ private:
     QSpacerItem    *horizontalSpacer;
     QSpacerItem    *horizontalSpacer_2;
 
-    QLineEdit *LoginlineEdit;
-    QLineEdit *MandatlineEdit;
+    QComboBox *printersComboBox;
+    QListWidget *usersList;
 
-    QLineEdit *NameZPlineEdit;
-    QLineEdit *NameGMlineEdit;
-    QLineEdit *DayMlineEdit;
-    QLineEdit *VRNTlineEdit;
-    QLineEdit *NBMlineEdit;
-    QLineEdit *ReqlineEdit;
-    QCheckBox *TracecheckBox;
+    QLineEdit *secLabelLineEdit;
+
     QLedIndicator *led_auth;
     QLedIndicator *led_surd;   
 
     QFrame         *line;
     QErrorMessage  *myEMsgBox;
-
 
     QPoint calcDeskTopCenter(int width,int height);
 

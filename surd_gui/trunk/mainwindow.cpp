@@ -7,19 +7,26 @@
 #include <QtGui/QApplication>
 
 #include <QtGui/QFrame>
-#include <QtGui/QHBoxLayout>
+
+#include <QtGui/QFormLayout>
+#include <QtGui/QVBoxLayout>
+
 #include <QtGui/QLabel>
 #include <QtGui/QPushButton>
 #include <QtGui/QSpacerItem>
-#include <QtGui/QVBoxLayout>
+
 #include <QtGui/QWidget>
 #include <QtGui/QLineEdit>
 #include <QtGui/QGroupBox>
+#include <QtGui/QListWidget>
+
 #include <QFont>
 #include <QRegExp>
 #include <QRegExpValidator>
 
 #include <QtGui/QErrorMessage>
+#include <QComboBox>
+
 #include <QDataWidgetMapper>
 
 #include "mainwindow.h"
@@ -35,8 +42,11 @@ MainWindow::MainWindow(QWidget *parent)
     , serverPort(-1)
 
 {
+    QFont font;
+    font.setFamily(QString::fromUtf8("Verdana"));
+    font.setPointSize(10);
 
-    this->setWindowTitle(QObject::trUtf8("Программа генерации запроса для ТД,СД,ОД"));
+    this->setWindowTitle(QObject::trUtf8("Управление принтерами в системе ЗАРЯ"));
     //Основной потребитель ошибок
     myEMsgBox = new QErrorMessage(this);
     // Запуск ядра программы
@@ -60,51 +70,38 @@ MainWindow::MainWindow(QWidget *parent)
     //-------------------------------- Центральный блок -----------------------
 
     QGroupBox *groupBox = new QGroupBox();
-    QGridLayout gridLayout = new QGridLayout(groupBox);
+    QFormLayout * formLayout = new QFormLayout(groupBox);
+    printersComboBox = new QComboBox(groupBox);
+    secLabelLineEdit  = new QLineEdit(groupBox);
+    usersList = new QListWidget(groupBox);
 
     QLabel *label   = new QLabel(groupBox);
     QLabel *label_0 = new QLabel(groupBox);
     QLabel *label_1 = new QLabel(groupBox);
-    QLabel *label_2 = new QLabel(groupBox);
 
-    label->setText  (QObject::trUtf8("Логин:"));
-    label_0->setText(QObject::trUtf8("Мандат:"));
-    label_1->setText(QObject::trUtf8("Имя ZP запроса:"));
-    label_2->setText(QObject::trUtf8("Имя групой машины:"));
+    label->setFont(font);
+    label_0->setFont(font);
+    label_1->setFont(font);
 
-
-    NBMlineEdit    = new QLineEdit(groupBox);
-    ReqlineEdit    = new QLineEdit(groupBox);
+    label->setText  (QObject::trUtf8("Текущий принтер:"));
+    label_0->setText(QObject::trUtf8("Метка конфиденциальности:"));
+    label_1->setText(QObject::trUtf8("Список пользователей:"));
 
     // Валидаторы
-    QRegExp rxInt( "^[0-9]{1,3}$" );
-    QRegExp rxReq( "^"
-                  "([0-9]{1,3}[,\\-,\\,]{1}){1,}"
-                  "$");
-    QRegExpValidator *validator_INT_3 = new QRegExpValidator( rxInt, 0 );
-    QRegExpValidator *validator_Req = new QRegExpValidator( rxReq, 0 );
+    QRegExp rxInt( "^S[0-9]{1,2}\\:C[0-9]{1,4}$" );
+    //QRegExpValidator *validator_SecLabel = ;
 
-    //ReqlineEdit->setValidator( validator_Req );
+    secLabelLineEdit->setValidator( new QRegExpValidator( rxInt, 0 ) );
 
 
     formLayout->setWidget(0, QFormLayout::LabelRole, label);
     formLayout->setWidget(1, QFormLayout::LabelRole, label_0);
     formLayout->setWidget(2, QFormLayout::LabelRole, label_1);
-    formLayout->setWidget(3, QFormLayout::LabelRole, label_2);
-    formLayout->setWidget(4, QFormLayout::LabelRole, label_3);
-    formLayout->setWidget(5, QFormLayout::LabelRole, label_4);
-    formLayout->setWidget(6, QFormLayout::LabelRole, label_5);
-    formLayout->setWidget(7, QFormLayout::LabelRole, label_6);
 
-    formLayout->setWidget(0, QFormLayout::FieldRole, LoginlineEdit);
-    formLayout->setWidget(1, QFormLayout::FieldRole, MandatlineEdit);
-    formLayout->setWidget(2, QFormLayout::FieldRole, NameZPlineEdit);
-    formLayout->setWidget(3, QFormLayout::FieldRole, NameGMlineEdit);
-    formLayout->setWidget(4, QFormLayout::FieldRole, DayMlineEdit);
-    formLayout->setWidget(5, QFormLayout::FieldRole, VRNTlineEdit);
-    formLayout->setWidget(6, QFormLayout::FieldRole, NBMlineEdit);
-    formLayout->setWidget(7, QFormLayout::FieldRole, ReqlineEdit);
-    formLayout->setWidget(8, QFormLayout::LabelRole, TracecheckBox);
+    formLayout->setWidget(0, QFormLayout::FieldRole, printersComboBox);
+    formLayout->setWidget(1, QFormLayout::FieldRole, secLabelLineEdit);
+    formLayout->setWidget(2, QFormLayout::FieldRole, usersList);
+
 
     //-------------------------------- Модная линия ---------------------------
     line = new QFrame(this);
@@ -147,7 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
     exitButton       = new QPushButton(this);
 
     helpButton->setText(QObject::trUtf8("Справка"));
-    sendButton->setText(QObject::trUtf8("Записать"));
+    sendButton->setText(QObject::trUtf8("Редактировать"));
     exitButton->setText(QObject::trUtf8("Выход"));
 
     sendButton->setDefault(true);
@@ -184,18 +181,7 @@ MainWindow::MainWindow(QWidget *parent)
              this       , SLOT  (networkEnabled())
              );
 
-    connect(LoginlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-    connect(MandatlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-    connect(NameZPlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-    connect(NameGMlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
+
     /*
     connect(DayMlineEdit, SIGNAL(editingFinished()),
             this, SLOT(checkDataFill())
@@ -208,13 +194,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(NBMlineEdit, SIGNAL(editingFinished()),
             this, SLOT(checkDataFill())
             );
-    */
-    connect(ReqlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-    connect(TracecheckBox, SIGNAL(clicked(bool)),
-            m_engine, SLOT(saveTraceState(bool))
-            );
+
 
     // свяжем модель данных и поля ввода данных
     mapper->addMapping(LoginlineEdit, 0);
@@ -227,8 +207,7 @@ MainWindow::MainWindow(QWidget *parent)
     mapper->addMapping(ReqlineEdit,7);
     //mapper->addMapping(TracecheckBox,8);
     mapper->toFirst();
-    // Грязный хак
-    TracecheckBox->click();
+    */
 }
 
 void MainWindow::init(const QString &app_dir)
@@ -254,6 +233,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::checkAuthUser(const QString &login, const QString &mandat)
 {
+    /*
     if (!login.isEmpty()){
 
         LoginlineEdit->setText(login);
@@ -268,7 +248,7 @@ void MainWindow::checkAuthUser(const QString &login, const QString &mandat)
             m_netClient->reSendNetworkMessage(msg);
         }
     }
-
+*/
 }
 
 void MainWindow::do_needAuthUser(const QString &login_mandat_list)
@@ -316,20 +296,7 @@ void MainWindow::checkDataFill()
     bool ok =true;
     {
 
-        if ( LoginlineEdit->text().isEmpty()){
-            ok &=false;
-        }
-        if ( MandatlineEdit->text().isEmpty()){
-            ok &=false;
-        }
-        if ( NameZPlineEdit->text().isEmpty()){
-            ok &=false;
-        }
-        if ( NameGMlineEdit->text().isEmpty()){
-            ok &=false;
-        }else{
 
-        }
         /*
         if ( DayMlineEdit->text().isEmpty()){
             ok &=false;
@@ -343,13 +310,11 @@ void MainWindow::checkDataFill()
             ok &=false;
         }
         */
-        if ( ReqlineEdit->text().isEmpty()){
-            ok &=false;
-        }
+
 
     }
 
-    //sendButton->setEnabled(ok);    
+    sendButton->setEnabled(ok);
 }
 
 void MainWindow::sendDataToNet()
