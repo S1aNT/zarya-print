@@ -40,14 +40,18 @@ HEADERS += mainwindow.h \
     qledindicator.h \
     engine.h \
     networkclient.h \
-    form.h
+    form.h \
+    exttreeview.h \
+    editprinterproperty.h
 SOURCES += main.cpp \
     mainwindow.cpp \
     $${GLOBAL_DIR}/message.cpp \
     qledindicator.cpp \
     engine.cpp \
     networkclient.cpp \
-    form.cpp
+    form.cpp \
+    exttreeview.cpp \
+    editprinterproperty.cpp
 RESOURCES = images.qrc
 TRANSLATIONS = auditor_ru.ts
 FORMS += form.ui
