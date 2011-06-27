@@ -26,11 +26,12 @@
 
 #include <QtGui/QErrorMessage>
 #include <QComboBox>
-
+#include <QTreeView>
 #include <QDataWidgetMapper>
+#include <QMessageBox>
 
 #include "mainwindow.h"
-
+#include "editprinterproperty.h"
 
 using namespace VPrn;
 
@@ -42,9 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     , serverPort(-1)
 
 {
-    QFont font;
-    font.setFamily(QString::fromUtf8("Verdana"));
-    font.setPointSize(10);
+
 
     this->setWindowTitle(QObject::trUtf8("Управление принтерами в системе ЗАРЯ"));
     //Основной потребитель ошибок
@@ -55,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_netClient = new NetWorkClient(this);
 
     //Запуск маппера модель-поля ввода
-    QDataWidgetMapper *mapper = new QDataWidgetMapper;
+    mapper = new QDataWidgetMapper;
     mapper->setModel( m_engine->model() );
     mapper->setSubmitPolicy(QDataWidgetMapper::ManualSubmit);
 
@@ -68,39 +67,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     mainLayout = new QVBoxLayout(this);
     //-------------------------------- Центральный блок -----------------------
+    prnTreeView = new QTreeView(this);
 
-    QGroupBox *groupBox = new QGroupBox();
-    QFormLayout * formLayout = new QFormLayout(groupBox);
-    printersComboBox = new QComboBox(groupBox);
-    secLabelLineEdit  = new QLineEdit(groupBox);
-    usersList = new QListWidget(groupBox);
-
-    QLabel *label   = new QLabel(groupBox);
-    QLabel *label_0 = new QLabel(groupBox);
-    QLabel *label_1 = new QLabel(groupBox);
-
-    label->setFont(font);
-    label_0->setFont(font);
-    label_1->setFont(font);
-
-    label->setText  (QObject::trUtf8("Текущий принтер:"));
-    label_0->setText(QObject::trUtf8("Метка конфиденциальности:"));
-    label_1->setText(QObject::trUtf8("Список пользователей:"));
-
-    // Валидаторы
-    QRegExp rxInt( "^S[0-9]{1,2}\\:C[0-9]{1,4}$" );
-    //QRegExpValidator *validator_SecLabel = ;
-
-    secLabelLineEdit->setValidator( new QRegExpValidator( rxInt, 0 ) );
-
-
-    formLayout->setWidget(0, QFormLayout::LabelRole, label);
-    formLayout->setWidget(1, QFormLayout::LabelRole, label_0);
-    formLayout->setWidget(2, QFormLayout::LabelRole, label_1);
-
-    formLayout->setWidget(0, QFormLayout::FieldRole, printersComboBox);
-    formLayout->setWidget(1, QFormLayout::FieldRole, secLabelLineEdit);
-    formLayout->setWidget(2, QFormLayout::FieldRole, usersList);
+    prnTreeView->setModel( m_engine->model() );
+    prnTreeView->header()->setStretchLastSection(false);
+    prnTreeView->header()->setResizeMode(0, QHeaderView::Stretch);
+    prnTreeView->header()->setResizeMode(1, QHeaderView::Interactive);
+    prnTreeView->header()->setResizeMode(2, QHeaderView::Interactive);
+    prnTreeView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    prnTreeView->setColumnHidden(3,true);
 
 
     //-------------------------------- Модная линия ---------------------------
@@ -140,61 +115,30 @@ MainWindow::MainWindow(QWidget *parent)
     horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding,
                                          QSizePolicy::Minimum);
     helpButton       = new QPushButton(this);    
-    sendButton       = new QPushButton(this);
+    editButton       = new QPushButton(this);
     exitButton       = new QPushButton(this);
 
     helpButton->setText(QObject::trUtf8("Справка"));
-    sendButton->setText(QObject::trUtf8("Редактировать"));
+    editButton->setText(QObject::trUtf8("Редактировать"));
     exitButton->setText(QObject::trUtf8("Выход"));
 
-    sendButton->setDefault(true);
-    sendButton->setEnabled(true);
+    editButton->setDefault(true);
+    editButton->setEnabled(true);
 
     horizontalLayout->addWidget(helpButton);
     horizontalLayout->addItem(horizontalSpacer);
-    horizontalLayout->addWidget(sendButton);
+    horizontalLayout->addWidget (editButton);
     horizontalLayout->addItem(horizontalSpacer_2);
     horizontalLayout->addWidget(exitButton);
     //-------------------------------------- Компоновка -----------------------
 
-    mainLayout->addWidget(groupBox);
+    mainLayout->addWidget(prnTreeView);
     mainLayout->addWidget(line);
     mainLayout->addWidget(led_groupBox);
     mainLayout->addLayout(horizontalLayout);
 
-    connect(exitButton,SIGNAL(clicked()),qApp,SLOT(quit()));
-
-    connect(sendButton,SIGNAL(clicked()),mapper,SLOT(submit()));
-    connect(sendButton,SIGNAL(clicked()),this,SLOT(sendDataToNet()));
-
-    connect(m_engine,SIGNAL(error(VPrn::AppErrorType,QString)),
-            this,    SLOT (do_error(VPrn::AppErrorType,QString))
-            );
-    connect(m_engine, SIGNAL(definedAuthData(const QString&,const QString&)),
-            this,     SLOT  (checkAuthUser(const QString&,const QString&))
-            );
-
-    connect (m_netClient, SIGNAL(reciveMessageString(QString)),
-             this       , SLOT  (parseNetworkMessage(QString))
-             );
-    connect (m_netClient, SIGNAL(connectToRemoteServer()),
-             this       , SLOT  (networkEnabled())
-             );
-
-
+    this->connectAll();
     /*
-    connect(DayMlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-
-    connect(VRNTlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-
-    connect(NBMlineEdit, SIGNAL(editingFinished()),
-            this, SLOT(checkDataFill())
-            );
-
 
     // свяжем модель данных и поля ввода данных
     mapper->addMapping(LoginlineEdit, 0);
@@ -232,28 +176,30 @@ MainWindow::~MainWindow()
 //------------------------------------PRIVATE SLOTS ------------------------------------
 
 void MainWindow::checkAuthUser(const QString &login, const QString &mandat)
-{
-    /*
-    if (!login.isEmpty()){
+{   
+    if (!login.isEmpty() && !mandat.isEmpty() ){
+        led_auth->setChecked(true);
+        /*
+         * @brief Формируем запрос к УС в ответе получим данные :
+         * @li Список принтеров в системе защищенной печати
+         * @li Список пользователей в системе защищенной печати
+         * @li Расширенные атрибуты каждого принтера (Метка секретности, список допущенных пользователей)
+         * Данные сохраняются в локальной БД приложения все изменения отправляются на сервер
+         * Ограничения. Список принтеров будет ограничен мандатом пользователя, не выше чем его мандат
+         */
+        QString data = QString("%1;:;%2").arg(login,mandat);
+        Message msg;
+        msg.setType(VPrn::Que_GetPrintersInfo);
+        msg.setMessageData(data.toUtf8());
+        m_netClient->reSendNetworkMessage(msg);
 
-        LoginlineEdit->setText(login);
-
-        if (!mandat.isEmpty()){
-            MandatlineEdit->setText(mandat);
-            led_auth->setChecked(true);
-        }else{
-            // Запрос списка доступных мандатов из сети
-            // Формат VPrn::Que_MANDAT_LIST;:;login
-            QString msg= QString("BPUSK_PLAIN %1;:;%2").arg(VPrn::Que_MANDAT_LIST,0,10).arg(login);
-            m_netClient->reSendNetworkMessage(msg);
-        }
     }
-*/
+
 }
 
-void MainWindow::do_needAuthUser(const QString &login_mandat_list)
+void MainWindow::networkEnabled()
 {
-
+    led_surd->setChecked(true);
 }
 
 void MainWindow::do_error(VPrn::AppErrorType eCode,QString e_msg)
@@ -263,41 +209,35 @@ void MainWindow::do_error(VPrn::AppErrorType eCode,QString e_msg)
     myEMsgBox->showMessage(extMsg);
     qDebug() << extMsg;
 }
-
-void MainWindow::parseNetworkMessage(const QString & msg)
+void MainWindow::editSelectItem()
 {
-    // myEMsgBox->showMessage(msg);
-
-    // Разберем тело ответа на части [кому];:;что_передали
-    QRegExp rx("\\[(.+)\\];:;(.*)");
-    //rx.setMinimal(true);
-
-    if(rx.indexIn(msg) != -1){
-        int cmd   = rx.cap(1).toInt();
-        QString m_body  = rx.cap(2);
-        switch (cmd){
-        case VPrn::Ans_MANDAT_LIST:
-            this->do_needAuthUser(m_body);
-            break;
-
-        }
+    QModelIndex idx = prnTreeView->currentIndex();
+    QStandardItem *currentItem = m_engine->model()->itemFromIndex(idx);
+    QStandardItem *item;
+    if ( currentItem->parent()){
+        item  = currentItem->parent();
     }else{
-        myEMsgBox->showMessage(QObject::trUtf8("Ошибка разбора сообщения сервера."));
+        item = currentItem;
     }
-}
-
-void MainWindow::networkEnabled()
-{
-    led_surd->setChecked(true);
+    // Формируем Окно редактора
+    EditPrinterProperty *editDlg = new EditPrinterProperty(this);
+    editDlg->setVisiblePartModel(m_engine->model(),)
+    editDlg->exec();
+    /*
+    QMessageBox msgBox;
+    msgBox.setText(item->data(Qt::DisplayRole).toString());
+    msgBox.exec();
+    */
 }
 
 void MainWindow::checkDataFill()
 {
+    /*
     bool ok =true;
     {
 
 
-        /*
+
         if ( DayMlineEdit->text().isEmpty()){
             ok &=false;
         }
@@ -309,12 +249,13 @@ void MainWindow::checkDataFill()
         if ( NBMlineEdit->text().isEmpty()){
             ok &=false;
         }
-        */
+
 
 
     }
 
-    sendButton->setEnabled(ok);
+    editButton->setEnabled(ok);
+    */
 }
 
 void MainWindow::sendDataToNet()
@@ -330,6 +271,9 @@ void MainWindow::sendDataToNet()
     */
 }
 
+void MainWindow::help()
+{
+}
 
 //------------------------------------ PRIVATE ---------------------------------------------
 
@@ -345,7 +289,7 @@ QPoint MainWindow::calcDeskTopCenter(int width,int height)
 
 bool MainWindow::readConfig(const QString &app_dir)
 {
-    QString ini_file =QString("%1/Zarya.ini").arg(app_dir);
+    QString ini_file =QString("%1/zarya.ini").arg(app_dir);
     if (QFile::exists(ini_file)){
         QSettings settings (ini_file,QSettings::IniFormat);
 
@@ -370,4 +314,48 @@ bool MainWindow::readConfig(const QString &app_dir)
     }else{
         return false;
     }
+}
+
+void MainWindow::connectAll()
+{
+    // ---------------------------- Buttons
+    connect(helpButton,SIGNAL(clicked()),this,SLOT(help()));
+    connect(editButton,SIGNAL(clicked()),this,SLOT(editSelectItem()));
+    connect(editButton,SIGNAL(clicked()),this,SLOT(sendDataToNet()));
+    connect(exitButton,SIGNAL(clicked()),qApp,SLOT(quit()));
+    //----------------------------- Engine
+    connect(m_engine,SIGNAL(error(VPrn::AppErrorType,QString)),
+            this,    SLOT (do_error(VPrn::AppErrorType,QString))
+            );
+    connect(m_engine, SIGNAL(definedAuthData(const QString&,const QString&)),
+            this,     SLOT  (checkAuthUser(const QString&,const QString&))
+            );
+
+    //----------------------------- Netork client
+    connect (m_netClient, SIGNAL(reciveMessageString(const Message &)),
+             m_engine   , SLOT  (parseNetworkMessage(const Message &))
+             );
+    connect (m_netClient, SIGNAL(connectToRemoteServer()),
+             this       , SLOT  (networkEnabled())
+             );
+    connect (m_netClient, SIGNAL(connectToRemoteServer()),
+             m_engine    , SLOT  (getUserId())
+             );
+
+    connect( prnTreeView, SIGNAL( doubleClicked(const QModelIndex&) ),
+            this, SLOT( editSelectItem(const QModelIndex&) ) );
+
+    /*
+   connect(DayMlineEdit, SIGNAL(editingFinished()),
+            this, SLOT(checkDataFill())
+            );
+
+    connect(VRNTlineEdit, SIGNAL(editingFinished()),
+            this, SLOT(checkDataFill())
+            );
+
+    connect(NBMlineEdit, SIGNAL(editingFinished()),
+            this, SLOT(checkDataFill())
+            );
+*/
 }

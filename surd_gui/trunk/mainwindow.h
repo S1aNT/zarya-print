@@ -8,6 +8,7 @@
 #include "qledindicator.h"
 #include "engine.h"
 #include "networkclient.h"
+//#include "exttreeview.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -22,6 +23,9 @@ class QSpacerItem;
 class QErrorMessage;
 class QComboBox;
 class QListWidget;
+class QDataWidgetMapper;
+class QTreeView;
+class QModelIndex;
 QT_END_NAMESPACE
 
 namespace Ui {
@@ -43,16 +47,18 @@ public slots:
 
 private slots:
     void checkAuthUser(const QString &login, const QString &mandat);
-    void do_needAuthUser(const QString &login_mandat_list);
-    void do_error(VPrn::AppErrorType eCode,QString e_msg);
-    void parseNetworkMessage(const QString & msg);
     void networkEnabled();
+    void do_error(VPrn::AppErrorType eCode,QString e_msg);
+    void editSelectItem();
+
     void checkDataFill();
     void sendDataToNet();
+    void help();
 
 private:        
     Engine *m_engine;
     NetWorkClient *m_netClient;
+    QDataWidgetMapper *mapper;
 
     QString serverName;
     qint32 serverPort;
@@ -65,16 +71,16 @@ private:
     QVBoxLayout    *mainLayout;
 
     QPushButton    *helpButton;    
-    QPushButton    *sendButton;
+    QPushButton    *editButton;
     QPushButton    *exitButton;
     QSpacerItem    *horizontalSpacer;
     QSpacerItem    *horizontalSpacer_2;
 
-    QComboBox *printersComboBox;
-    QListWidget *usersList;
+    QTreeView      *prnTreeView;
 
-    QLineEdit *secLabelLineEdit;
+    /*
 
+*/
     QLedIndicator *led_auth;
     QLedIndicator *led_surd;   
 
@@ -84,7 +90,7 @@ private:
     QPoint calcDeskTopCenter(int width,int height);
 
     bool readConfig(const QString &app_dir);
-
+    void connectAll();
 };
 
 #endif // MAINWINDOW_H
