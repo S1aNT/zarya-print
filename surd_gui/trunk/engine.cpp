@@ -6,31 +6,48 @@
 #include <QTextStream>
 #include <QList>
 #include <QStandardItem>
+#include <QProcess>
+#include <QDataStream>
 
+
+#include "message.h"
 
 Engine::Engine(QObject *parent)
     : QObject(parent)
     , data_model(0)
+    ,prnInfoModel(0)
 {
+    prnInfoModel = new QStandardItemModel(this);
 
-    data_model = new QStandardItemModel(this);
-    QList <QStandardItem *> items;
+    data_model = new QStandardItemModel(5,4,this);
 
-    for (int i=0;i<9;i++){
-        items.append(new QStandardItem());
+    data_model->setHorizontalHeaderLabels(QStringList()<< QObject::trUtf8("Принтеры") << QObject::trUtf8("Метка")<< QObject::trUtf8("Примечание") << tr("ID"));
+
+    for (int nTopRow=0;nTopRow<5;++nTopRow){
+        QModelIndex index=data_model->index(nTopRow,0);
+
+        data_model->setData(data_model->index(nTopRow,0),"Printer_"+QString::number(nTopRow+1),Qt::DisplayRole);
+        data_model->setData(data_model->index(nTopRow,0),QIcon(":/printer.png"),Qt::DecorationRole);
+
+        data_model->setData(data_model->index(nTopRow,1),"S"+QString::number(nTopRow+1)+":C"+QString::number(nTopRow+20) );
+
+        data_model->setData(data_model->index(nTopRow,3),QString::number(nTopRow+1),Qt::DisplayRole);
+
+        data_model->insertRows(0,4,index);
+        data_model->insertColumns(0,4,index);
+        for (int nRow=0;nRow<4;++nRow){
+            data_model->setData(data_model->index(nRow,0,index),QObject::trUtf8("Юзер"),Qt::DisplayRole);
+            data_model->setData(data_model->index(nRow,0,index),QIcon(":/user.png"),Qt::DecorationRole);
+            //data_model->itemFromIndex(data_model->index(nRow,0,index))->setCheckable(true);
+            //data_model->itemFromIndex(data_model->index(nRow,0,index))->setCheckState(Qt::Checked);
+
+            data_model->setData(data_model->index(nRow,1,index),"S"+QString::number(nRow+1)+":C"+QString::number(nRow+40) );
+            data_model->setData(data_model->index(nRow,2,index),QObject::trUtf8("Примечание"),Qt::DisplayRole);
+            data_model->setData(data_model->index(nRow,3,index),QString::number(nRow+1),Qt::DisplayRole);
+        }
     }
-    data_model->appendRow(items);
-/*
-    data_model->setHeaderData(VPrn::bp_Login,Qt::Horizontal,QObject::trUtf8("Логин"));
-    data_model->setHeaderData(VPrn::bp_Mandat,Qt::Horizontal,QObject::trUtf8("Мандат"));
-    data_model->setHeaderData(VPrn::bp_NameZP,Qt::Horizontal,QObject::trUtf8("Имя ZP запроса"));
-    data_model->setHeaderData(VPrn::bp_NameGM,Qt::Horizontal,QObject::trUtf8("Имя групой машины"));
-    data_model->setHeaderData(VPrn::bp_DayM,Qt::Horizontal,QObject::trUtf8("ДеньМ"));
-    data_model->setHeaderData(VPrn::bp_VRNT,Qt::Horizontal,QObject::trUtf8("Вариант"));
-    data_model->setHeaderData(VPrn::bp_NBM ,Qt::Horizontal,QObject::trUtf8("Номер МБ"));
-    data_model->setHeaderData(VPrn::bp_Req ,Qt::Horizontal,QObject::trUtf8("Номера запросов"));
-    data_model->setHeaderData(VPrn::bp_Trace ,Qt::Horizontal,QObject::trUtf8("Протокол"));
-    */
+
+
 }
 
 Engine::~Engine()
@@ -38,9 +55,87 @@ Engine::~Engine()
     if (data_model !=0){
         data_model->deleteLater();
     }
+    if (prnInfoModel!=0){
+        prnInfoModel->deleteLater();
+    }
 }
 
 //----------------- Public Slots -----------------------------------------------
+void Engine::getUserId()
+{
+    QProcess proc;
+    QString m_Output;
+
+    proc.setProcessChannelMode( QProcess::SeparateChannels );
+    proc.start( "id - Z" );
+    if (!proc.waitForStarted(5000)) {
+        QString e_info;
+        switch(proc.error()){
+        case QProcess::FailedToStart:
+            e_info = QObject::trUtf8("[Процесс не запущен или отстутсвуют права доступа на исполнение]");
+            break;
+        case QProcess::Crashed:
+            e_info = QObject::trUtf8("[Процесс завершен с ошибкой, после успешного запуска]");
+            break;
+        case QProcess::Timedout:
+            e_info = QObject::trUtf8("[Превышен предел ожидания ответа от процесса]");
+            break;
+        case QProcess::WriteError:
+            e_info = QObject::trUtf8("[Ошибка записи в процесс (Процесс не запущен?)]");
+            break;
+        case QProcess::ReadError:
+            e_info = QObject::trUtf8("[Ошибка чтения из процесса (Процесс не запущен?)]");
+            break;
+        case QProcess::UnknownError:
+            e_info = QObject::trUtf8("[Неизвестная ошибка]");
+            break;
+        }
+        emit error(VPrn::InternalAppError,
+                   QObject::trUtf8("Ошибка %1\nПри запуске приложения id -Z !\n%2")
+                   .arg(e_info)
+                   .arg(QString(Q_FUNC_INFO))
+                   );
+        qDebug()<< m_Output << " QProcess::error() " << proc.error();
+    }else{
+        proc.waitForFinished(-1);
+        proc.closeWriteChannel();
+        m_Output = proc.readAll();//.trimmed();
+        qDebug() << Q_FUNC_INFO << "m_Output " << m_Output << "\n";
+        //Разберем ответ в формате
+        m_login = "usr_1";
+        m_mandat= "S3:C245";
+
+        emit definedAuthData(m_login,m_mandat);
+    }
+
+}
+
+void Engine::parseNetworkMessage(const Message & msg)
+{
+    MessageType mType = msg.getType();
+    QByteArray m_data = msg.getMessageData();
+
+    switch (mType){
+    case VPrn::Ans_GetPrintersInfo:
+    {
+        QDataStream in(&m_data, QIODevice::ReadOnly );
+        in.setVersion(QDataStream::Qt_4_0);
+        //in >> prnList;   // Получим список принтеров
+        //in >> userList;  // Получим список пользователей
+        //in >> relPrnUsr; // Получим таблицу связей Принтер->Допущенные поьзователи
+    }
+        break;
+    default:
+        break;
+    }
+
+}
+
+//-------------------- Private --------------------------------------------------------------
+void Engine::updateData()
+{
+
+}
 /*
 void Engine::setAuthData(const QString &login,const QString &mandat)
 {
