@@ -35,7 +35,7 @@ void Message::setMessageData( QStringList &m_list )
 {
     if (!m_list.isEmpty()) {        
         QDataStream out(&msgData, QIODevice::WriteOnly );
-        out.setVersion(QDataStream::Qt_3_0);
+        out.setVersion(QDataStream::Qt_4_0);
         out << m_list;
     }
 }
@@ -50,7 +50,7 @@ QStringList Message::getMessageDataList() const
 {
     QStringList list;
     QDataStream in( msgData );
-    in.setVersion(QDataStream::Qt_3_0);
+    in.setVersion(QDataStream::Qt_4_0);
     in >> list;
     return list;
 }
@@ -69,8 +69,8 @@ QByteArray Message::createPacket() const
     qint32 packet_size(0);
     QDataStream out(&packet, QIODevice::WriteOnly );
 
-    //qDebug() << "\n ----------------- Create packet ---------------------\n";
-    out.setVersion(QDataStream::Qt_3_0);
+    //qDebug() << Q_FUNC_INFO << "\n ----------------- Create packet ---------------------\n";
+    out.setVersion(QDataStream::Qt_4_0);
     // Вставим размер пакета равный нулю, но отведем под него 8 байт
     
     out << packet_size;
@@ -85,9 +85,11 @@ QByteArray Message::createPacket() const
     // Вычислим размер блока данных и запишем их на свое место
     packet_size =(qint32)(packet.size() - sizeof(qint32));
     out << ( qint32 )  packet_size;
-    //qDebug()  << "\nall packet size " << packet_size;
-    //qDebug() << Q_FUNC_INFO << " packet_size "  << packet_size << "\n";
-    //qDebug() << "\n ------------- end create packet -----------------------\n";
+    /*
+    qDebug() << "data size " << packet_size;
+    qDebug() << "all packet size "  << (qint32)(packet.size() + sizeof(qint32));
+    qDebug() << "------------- end create packet -----------------------\n";
+    */
     return packet;
 }
 
