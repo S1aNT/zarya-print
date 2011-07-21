@@ -11,12 +11,18 @@
 #include "controlsrv.h"
 
 
+
 int main(int argc, char **argv)
 {
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     QTextCodec::setCodecForTr(codec);
     QTextCodec::setCodecForCStrings(codec);
+#if defined(Q_WS_WIN)
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("CP866"));
+#else
     QTextCodec::setCodecForLocale(codec);
+#endif
+
 /*
 #if !defined(Q_WS_WIN)
     // QtService stores service settings in SystemScope, which normally require root privileges.
@@ -25,6 +31,7 @@ int main(int argc, char **argv)
     qWarning("(Example uses dummy settings file: %s/QtSoftware.conf)", QDir::tempPath().toLatin1().constData());
 #endif
 */
+
     ControlSrv daemon(argc, argv);
     return daemon.exec();
 
