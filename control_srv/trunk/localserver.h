@@ -14,13 +14,9 @@ class LocalServer : public QTcpServer
     Q_OBJECT
 public:
     LocalServer( QObject* parent = 0);
-    LocalServer( quint16 port, QObject* parent = 0);
-
     void pause();
     void resume();
 signals:    
-    //void newClientConnected(const QString &c_uuid);
-    //void currentClientDisConnected(const QString &c_uuid);
 
     void sendEventMessageInfo(QString eMsg,
                               VPrn::EventLogMessageId eventCode,

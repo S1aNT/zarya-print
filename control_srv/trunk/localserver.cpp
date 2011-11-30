@@ -12,24 +12,6 @@ LocalServer::LocalServer(QObject* parent)
             this, SLOT(client_init()));
 }
 
-LocalServer::LocalServer(quint16 port, QObject* parent)
-        : QTcpServer(parent)
-        , disabled(true)
-        , packetSize(-1)
-{
-    connect(this, SIGNAL(newConnection()),
-            this, SLOT(client_init()));
-
-    if ( !listen(QHostAddress::LocalHost, port) ){
-
-        emit sendEventMessageInfo(
-                QObject::trUtf8("\nТребуемый порт [%1] занят другим приложением!.")
-                .arg(port,0,10),
-                VPrn::eId_NetworkError,
-                VPrn::Error );
-    }
-}
-
 
 void LocalServer::pause()
 {
@@ -43,16 +25,16 @@ void LocalServer::resume()
     this->setMaxPendingConnections(30);    
 }
 
-
 void LocalServer::sendMessage (const QString &c_uuid,const Message &msg)
 {
     QTcpSocket *client(0);
     // По UUID определим через какого клиента надо отправить это сообщение
     client = findClient(c_uuid);
     if (client){
+        qDebug() << "Send message to: " <<c_uuid;
         //Сформируем пакет И пошлем его ветром гонимого клиенту
         client->write(msg.createPacket());
-        client->flush();
+        //client->flush();
     }
 }
 //------------------------------ private slots----------------------------------
@@ -61,7 +43,6 @@ void LocalServer::client_init()
     if ( disabled){
         return;
     }
-
 
     QTcpSocket *client = this->nextPendingConnection();
     if (client){
@@ -73,8 +54,8 @@ void LocalServer::client_init()
                 this,   SLOT(readyRead()));
         connect(client, SIGNAL(disconnected()),
                 this,   SLOT(disconnected()));
-        connect(client, SIGNAL(error(QLocalSocket::LocalSocketError)),
-                this,   SLOT(prepareError(QLocalSocket::LocalSocketError)));
+        connect(client, SIGNAL(error(QAbstractSocket::SocketError)),
+                this,   SLOT(prepareError(QAbstractSocket::SocketError)));
 
         emit sendEventMessageInfo(QObject::trUtf8("Новый клиент подключен!"),
                                   VPrn::eId_DebugInfo,
@@ -85,11 +66,19 @@ void LocalServer::client_init()
 
 void LocalServer::readyRead()
 {
+
     QTcpSocket *client = qobject_cast<QTcpSocket*>( QObject::sender() );
     QString client_uuid = clients_uuid.value(client);
+
     if (client){
+        emit sendEventMessageInfo(QObject::trUtf8("Пришло сообщение от клиента [%1]").arg(client_uuid),
+                                  VPrn::eId_DebugInfo,
+                                  VPrn::Information,VPrn::eCatId_DebugInfo);
+
+        qDebug() << "Recive message from: " <<client_uuid;
+
         QDataStream in ( client );
-        in.setVersion(QDataStream::Qt_3_0); // Для совместимости с серверной частью
+        in.setVersion(QDataStream::Qt_4_0); // Для совместимости с серверной частью
 
         while (client->bytesAvailable() > 0){
             if (packetSize == -1) {
@@ -143,8 +132,12 @@ void LocalServer::prepareError(QAbstractSocket::SocketError socketError)
     switch(socketError)
     {
     case QAbstractSocket::ConnectionRefusedError :
-        e_msg =QObject::trUtf8("Соединение отклоненно удаленным сервером [%1]")
+        e_msg =QObject::trUtf8("Соединение отклоненно удаленным клиентом [%1]")
                .arg(client->peerName() );
+        break;
+    case QAbstractSocket::RemoteHostClosedError:
+        e_msg =QObject::trUtf8("Соединение закрыто удаленным клиентом ");
+
         break;
     case QAbstractSocket::HostNotFoundError :
         e_msg =QObject::trUtf8("Удаленный сервер [%1] не найден!")

@@ -4,44 +4,22 @@
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlDriver>
 #include <QtSql/QSqlRecord>
-#include <QtSql/QSqlTableModel>
 #include <QtSql/QSqlQueryModel>
 #include <QDateTime>
 #include <QFile>
 
 Db_GateWay::Db_GateWay(QObject *parent)
     : QObject(parent)
-    , prnModel(0)
-    , usrModel(0)
-    , prn_usrModel(0)
     , m_DriverValid(false)
 {
-    // Инициализация БД, проверка наличия требуемого драйвера
-    {
-        QSqlDatabase db  = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"),
-                                                     QLatin1String("MAIN_CON"));
-        if (db.driver()->lastError().type() != QSqlError::ConnectionError) {
-            emit sendEventMessageInfo(QObject::trUtf8("Драйвер sqlite, успешно загружен."),
-                                      VPrn::eId_SQL_CoreInited,
-                                      VPrn::Information,
-                                      VPrn::eCatId_DebugInfo);
 
-            m_DriverValid =true;
-        }else{
-            emit sendEventMessageInfo(QObject::trUtf8("Не могу загрузить драйвер sqlite!\n%1")
-                                      .arg(QString(Q_FUNC_INFO)),
-                                      VPrn::eId_SQL_CoreNotInited,
-                                      VPrn::Error,
-                                      VPrn::eCatId_Error);
-        }
-    }
 
 }
 
 Db_GateWay::~Db_GateWay()
 {
-    QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
     {
+        QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
         if (db.isOpen()){
             db.close();
         }
@@ -51,72 +29,58 @@ Db_GateWay::~Db_GateWay()
 
 bool Db_GateWay::openMainBase(const QString &base_file)
 {
-    m_dbFile = base_file;
-    QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
-    db.setDatabaseName(m_dbFile);
-    bool ok=true;
+    m_dbFile = base_file;    
+    bool ok =true;
     {
-        ok &= m_DriverValid;
-        if (ok){
-            //Создаем модели
-            prnModel = new QSqlTableModel(this,db);
-            usrModel = new QSqlTableModel(this,db);
-            prn_usrModel = new QSqlTableModel(this,db);
+        // Инициализация БД, проверка наличия требуемого драйвера
+        QSqlDatabase db  = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"),
+                                                     QLatin1String("MAIN_CON"));
 
-            if (!QFile::exists(m_dbFile) ){ //File not found create empty base
-                if (db.open() ){
-                    ok &= createMainDB(db);
-                }
-            }
-            if (db.open() ){
+        if (db.driver()->lastError().type() != QSqlError::ConnectionError) {
+            emit sendEventMessageInfo(QObject::trUtf8("Драйвер sqlite, успешно загружен."),
+                                      VPrn::eId_SQL_CoreInited,
+                                      VPrn::Information,
+                                      VPrn::eCatId_DebugInfo);
 
-                //Проверим структуру базы
+            m_DriverValid =true;
+            db.setDatabaseName(m_dbFile);
+            ok &=db.open() && initDB(db);// Настройка базы
+            if (ok){
+                // Проверим БД содержит нужные таблицы
                 QStringList tables = db.tables();
-                ok &= ( tables.contains("printers", Qt::CaseInsensitive) &&
-                       tables.contains("users", Qt::CaseInsensitive) &&
-                       tables.contains("rel_prn_usr", Qt::CaseInsensitive)
-                       );
-                if (ok){
-                    // Настройка базы
-                    ok &= initDB(db);
-                    /*
-                    if (ok){
-                        prnModel->setTable( "printers" );
-                        prnModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
-                        prnModel->select();
-                        prnModel->setHeaderData(0, Qt::Horizontal, QObject::trUtf8("ID"));
-                        prnModel->setHeaderData(1, Qt::Horizontal, QObject::trUtf8("Принтер"));
-                        prnModel->setHeaderData(2, Qt::Horizontal, QObject::trUtf8("Мандат"));
 
-                        usrModel->setTable( "users" );
-                        usrModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
-                        usrModel->select();
-                        usrModel->setHeaderData(0, Qt::Horizontal, QObject::trUtf8("ID"));
-                        usrModel->setHeaderData(1, Qt::Horizontal, QObject::trUtf8("Логин"));
-                        usrModel->setHeaderData(2, Qt::Horizontal, QObject::trUtf8("Мандат"));
-
-
-                        prn_usrModel->setTable( "rel_prn_usr" );
-                        prn_usrModel->setEditStrategy(QSqlTableModel::OnManualSubmit);
-                        prn_usrModel->select();
-                    }
-                    */
+                if (!(tables.contains("printers", Qt::CaseInsensitive) &&
+                      tables.contains("users", Qt::CaseInsensitive) &&
+                      tables.contains("rel_prn_usr", Qt::CaseInsensitive) &&
+                      tables.contains("s_part", Qt::CaseInsensitive) &&
+                      tables.contains("c_part", Qt::CaseInsensitive)
+                      )){
+                    //Создадим нужные таблицы
+                    ok &= createMainDB();
+                    qDebug() << Q_FUNC_INFO << " db tables list " << db.tables();
+                    ok &= fillSTable();
+                    ok &= fillCTable();
                 }
+            }else{
+                ok &=false;
+                emit sendEventMessageInfo(QObject::trUtf8("Ошибка открытия БД!\n%1")
+                                          .arg(m_dbFile ),
+                                          VPrn::eId_AppsError,
+                                          VPrn::Error,
+                                          VPrn::eCatId_Error);
             }
+        }else{
+            ok &=false;
+            emit sendEventMessageInfo(QObject::trUtf8("Не могу загрузить драйвер sqlite!\n%1")
+                                      .arg(QString(Q_FUNC_INFO)),
+                                      VPrn::eId_SQL_CoreNotInited,
+                                      VPrn::Error,
+                                      VPrn::eCatId_Error);
         }
-    }
-    if (!ok){
-
-        emit sendEventMessageInfo(QObject::trUtf8("Ошибка работы с БД!\n%1")
-                                  .arg(db.lastError().text() ),
-                                  VPrn::eId_SQL_ExecError,
-                                  VPrn::Error,
-                                  VPrn::eCatId_Error);
-
     }
     return ok;
 }
-
+//
 
 //------------------------ PUBLIC SLOTS -----------------------------------------------
 void Db_GateWay::saveUserToBase(const QString &c_uuid,QStringList & u_list)
@@ -188,18 +152,17 @@ void Db_GateWay::closeMainDb()
     }
 }
 
-void Db_GateWay::getBaseSlice(const QString &c_uuid,
-                              const QString &login,const QString &mandat)
+void Db_GateWay::getDataBaseSlice(const QString &c_uuid,
+                                  const QString &login,const QString &mandat)
 {
     // Формирум поисковые части
     QRegExp rx("S(\\d{1,2}):C(\\d{1,4})");
+    QString S,C;
 
     if ( login.isEmpty() || mandat.isEmpty() ){
         return;
     }
-
-    QString S,C;
-    if(rx.indexIn(mandat) != -1){
+    if ( rx.indexIn(mandat ) != -1){
         S = QString("S%1").arg(rx.cap(1) );
         C = QString("C%1").arg(rx.cap(2) );
     }
@@ -221,14 +184,16 @@ void Db_GateWay::getBaseSlice(const QString &c_uuid,
                 return;
             }
 
-            // Sql query -> model -> QByteArray
+            // Sql query ->QByteArray
             QSqlQueryModel *sqlModel = new QSqlQueryModel(this);
 
+
             QByteArray data;
-            QDataStream out (&data, QIODevice::ReadOnly );
+            QDataStream out (&data, QIODevice::WriteOnly );
             out.setVersion(QDataStream::Qt_4_0);          
 
             out << QObject::trUtf8("printers");
+            qDebug() << QObject::trUtf8("printers");
             //Получим все принтеры имеющие такой же или  ниже мандат
 
             QString sql = QObject::tr("SELECT id,prn_name,mandat_s_id,mandat_c_id, prn_desc "
@@ -237,36 +202,64 @@ void Db_GateWay::getBaseSlice(const QString &c_uuid,
             sqlModel->setQuery(sql,db);
             if ( sqlModel->lastError().isValid() ){
                 dumpError(sqlModel->lastError());
+                emit informationToClient(c_uuid,QObject::trUtf8("Ошибка при выполнении sql запроса.\n Выбор принтеров имеющих такой и ниже мандат"));
             }else{
+                qDebug() << "rowCount " << sqlModel->rowCount();
+                qDebug() << "columnCount " << sqlModel->columnCount();
+
                 out << sqlModel->rowCount();
                 out << sqlModel->columnCount();
                 for (int i=0; i < sqlModel->rowCount(); i++){
-                    out << sqlModel->data(sqlModel->index(i, 0)).toInt(); //id
-                    out << sqlModel->data(sqlModel->index(i, 1)).toString();//prn_name
-                    out << sqlModel->data(sqlModel->index(i, 2)).toInt(); //mandat_s_id
-                    out << sqlModel->data(sqlModel->index(i, 3)).toInt(); //mandat_c_id
-                    out << sqlModel->data(sqlModel->index(i, 4)).toString(); //prn_desc
+                    out << sqlModel->data(sqlModel->index(i, 0)); //id
+                    out << sqlModel->data(sqlModel->index(i, 1)); //prn_name
+                    out << sqlModel->data(sqlModel->index(i, 2)); //mandat_s_id
+                    out << sqlModel->data(sqlModel->index(i, 3)); //mandat_c_id
+                    out << sqlModel->data(sqlModel->index(i, 4)); //prn_desc
+                }
+                out << QObject::trUtf8("users");
+                qDebug() << QObject::trUtf8("users");
+                //sqlModel->clear();
+                sqlModel->setQuery(QObject::tr("SELECT id,usr_name, mandat_s_id,mandat_c_id FROM users"),db);
+                if ( sqlModel->lastError().isValid() ){
+                    dumpError(sqlModel->lastError());
+                    emit informationToClient(c_uuid,QObject::trUtf8("Ошибка при выполнении sql запроса.\n Выбор списка пользователей."));
+                }else{
+                    qDebug() << "rowCount " << sqlModel->rowCount();
+                    qDebug() << "columnCount " << sqlModel->columnCount();
+                    out << sqlModel->rowCount();
+                    out << sqlModel->columnCount();
+                    for (int i=0; i < sqlModel->rowCount(); i++){
+                        out << sqlModel->data(sqlModel->index(i, 0)); //id
+                        out << sqlModel->data(sqlModel->index(i, 1)); //usr_name
+                        out << sqlModel->data(sqlModel->index(i, 2)); //mandat_s_id
+                        out << sqlModel->data(sqlModel->index(i, 3)); //mandat_c_id
+                    }
+                    out << QObject::trUtf8("rel_prn_usr");
+                    qDebug() << QObject::trUtf8("rel_prn_usr");
+                    //sqlModel->clear();
+                    sqlModel->setQuery(QObject::tr("SELECT prn_id,usr_id FROM rel_prn_usr"
+                                                   " WHERE prn_id IN "
+                                                   "(SELECT id FROM printers WHERE mandat_s_id <='%1' AND "
+                                                   " mandat_c_id <='%2')").arg(s_id,0,10).arg(c_id,0,10),
+                                       db);
+                    if ( sqlModel->lastError().isValid() ){
+                        dumpError(sqlModel->lastError());
+                        emit informationToClient(c_uuid,QObject::trUtf8("Ошибка при выполнении sql запроса.\n Выбор расширенных атрибутов принтеров"));
+                    }else{
+                        qDebug() << "rowCount " << sqlModel->rowCount();
+                        qDebug() << "columnCount " << sqlModel->columnCount();
+                        out << sqlModel->rowCount();
+                        out << sqlModel->columnCount();
+                        for (int i=0; i < sqlModel->rowCount(); i++){
+                            out << sqlModel->data(sqlModel->index(i, 0)); //prn_id
+                            out << sqlModel->data(sqlModel->index(i, 1)); //usr_id
+                        }
+                    }
+                    emit setDataBaseSlice (c_uuid,data);
                 }
             }
-            out << QObject::trUtf8("users");
-            sqlModel->clear();
-            sqlModel->setQuery(QObject::tr("SELECT id,usr_name, mandat_s_id,mandat_c_id FROM users"));
-            if ( sqlModel->lastError().isValid() ){
-                dumpError(sqlModel->lastError());
-            }else{
-                out << sqlModel->rowCount();
-                out << sqlModel->columnCount();
-                for (int i=0; i < sqlModel->rowCount(); i++){
-                    out << sqlModel->data(sqlModel->index(i, 0)).toInt(); //id
-                    out << sqlModel->data(sqlModel->index(i, 1)).toString();//usr_name
-                    out << sqlModel->data(sqlModel->index(i, 2)).toInt(); //mandat_s_id
-                    out << sqlModel->data(sqlModel->index(i, 3)).toInt(); //mandat_c_id
-                }
-            }
-            sqlModel->clear();
-
-
             sqlModel->deleteLater();
+
         }
     }
 }
@@ -277,7 +270,10 @@ int Db_GateWay::getPartTableId(QSqlDatabase db,const QString &table, const QStri
 {
     int id(-1);
     QSqlQuery query(db);
-    if ( query.exec( QObject::tr("SELECT id FROM %1 WHERE display_val='%3')").arg(table,value) ) ){
+
+    qDebug() << QObject::tr("SELECT \"id\" FROM \"%1\" WHERE display_val=\"%3\"").arg(table,value);
+
+    if ( query.exec( QObject::tr("SELECT \"id\" FROM \"%1\" WHERE display_val=\"%3\"").arg(table,value) ) ){
         int field_id  = query.record().indexOf("id");
         query.next();
         id = query.value(field_id).toInt();
@@ -292,7 +288,7 @@ int Db_GateWay::getUserId(QSqlDatabase db,const QString &login, int s_id, int c_
     int id(-1);
     QSqlQuery query(db);
     QString sql_txt = QObject::tr("SELECT id FROM users "
-                                  " WHERE usr_name ='%1' AND mandat_s_id='%2' AND mandat_c_id ='%3')")
+                                  " WHERE usr_name ='%1' AND mandat_s_id='%2' AND mandat_c_id ='%3'")
             .arg(login).arg(s_id,0,10).arg(c_id,0,10) ;
     if ( query.exec( sql_txt ) ){
         int field_id  = query.record().indexOf("id");
@@ -331,74 +327,115 @@ void Db_GateWay::dumpError (const QSqlError & lastError)
             << "lastError.number() "      << lastError.number() << "\n";
 }
 
-bool Db_GateWay::createMainDB(QSqlDatabase db)
-{
-
-    /*
-                                          "create view prn_usr_attr as "
-                                        " select printers.id,prn_name,prn_mandat,usr_name,usr_mandat from printers "
-                                        " inner join rel_prn_usr on printers.id=rel_prn_usr.prn_id "
-                                        " inner join users on users.id=rel_prn_usr.usr_id;"
-*/
+bool Db_GateWay::createMainDB()
+{ 
     bool ok=true;
-    {
+    {        
+        QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
         QSqlQuery query(db);
-        QString sql_txt = QLatin1String("BEGIN TRANSACTION;"
-                                        "CREATE TABLE sync (prn INTEGER,usr INTEGER, atr INTEGER);"
-
-                                        "create table input    (id INTEGER primary key autoincrement,"
-                                        "i_name text,i_mandat_s INTEGER, i_mandat_c INTEGER);"
-
-                                        "create table s_part   (id INTEGER primary key autoincrement,display_val text);"
-                                        "create table c_part   (id INTEGER primary key autoincrement,display_val text);"
-
-                                        "create table printers (prn_id INTEGER primary key autoincrement,"
-                                        "prn_name text,mandat_s_id INTEGER,mandat_c_id INTEGER, prn_desc text,"
-                                        "FOREIGN KEY(mandat_s_id) REFERENCES s_part(id),"
-                                        "FOREIGN KEY(mandat_c_id) REFERENCES c_part(id) );"
-
-                                        "create table users    (usr_id INTEGER primary key autoincrement,"
-                                        "usr_name text,mandat_s_id INTEGER,mandat_c_id INTEGER,"
-                                        "FOREIGN KEY(mandat_s_id) REFERENCES s_part(id),"
-                                        "FOREIGN KEY(mandat_c_id) REFERENCES c_part(id) );"
-
-                                        "create table rel_prn_usr (prn_id INTEGER,usr_id INTEGER,"
-                                        "FOREIGN KEY(prn_id) REFERENCES printers(id),"
-                                        "FOREIGN KEY(usr_id) REFERENCES users(id));"
-                                        "COMMIT;"
-                                        );
-        ok &= query.exec (sql_txt);
+        ok &= query.exec (QLatin1String("PRAGMA journal_mode=TRUNCATE;"
+                                        "PRAGMA synchronous=OFF;"
+                                        "PRAGMA temp_store=MEMORY;"
+                                        "PRAGMA foreign_keys=ON" ));
         if (ok){
-            //Заполним таблицы S [0-15]  значениями
-            ok &= query.prepare("INSERT INTO s_part (display_val) VALUES(?);");
-            if (ok){
-                for (int i=0;i<15;i++){
-                    query.addBindValue(QObject::tr("S%1").arg(i,0,10));
-                }
-                ok &= query.exec();
-                if (ok){
-                    //Заполним таблицы C[0-1024] значениями
-                    ok &= query.prepare("INSERT INTO c_part (display_val) VALUES(?);");
-                    if (ok){
-                        for (int i=0;i<1024;i++){
-                            query.addBindValue(QObject::tr("C%1").arg(i,0,10));
-                        }
-                        ok &= query.exec();
-                        if (!ok){
-                            dumpError(query.lastError());
-                        }
-                    }else{
-                        dumpError(query.lastError());
-                    }
-                }else{
-                    dumpError(query.lastError());
-                }
-            }else{
+
+            ok &= query.exec (QLatin1String("CREATE TABLE sync (prn INTEGER,usr INTEGER, atr INTEGER);"));
+            if (!ok){
                 dumpError(query.lastError());
             }
+            ok &= query.exec (QLatin1String("create table input    (id INTEGER primary key autoincrement,i_name text,i_mandat_s INTEGER, i_mandat_c INTEGER);"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+            ok &= query.exec (QLatin1String("create table printers (id INTEGER primary key autoincrement,"
+                                            "prn_name text,mandat_s_id INTEGER,mandat_c_id INTEGER, prn_desc text,"
+                                            "FOREIGN KEY(mandat_s_id) REFERENCES s_part(id),"
+                                            "FOREIGN KEY(mandat_c_id) REFERENCES c_part(id) );"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+            ok &= query.exec (QLatin1String("create table users    (id INTEGER primary key autoincrement,"
+                                            "usr_name text,mandat_s_id INTEGER,mandat_c_id INTEGER,"
+                                            "FOREIGN KEY(mandat_s_id) REFERENCES s_part(id),"
+                                            "FOREIGN KEY(mandat_c_id) REFERENCES c_part(id) );"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+            ok &= query.exec (QLatin1String("create table rel_prn_usr (prn_id INTEGER,usr_id INTEGER,"
+                                            "FOREIGN KEY(prn_id) REFERENCES printers(id),"
+                                            "FOREIGN KEY(usr_id) REFERENCES users(id));"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+
+            ok &= query.exec (QLatin1String("create table s_part (id INTEGER primary key autoincrement, display_val text);"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+            ok &= query.exec (QLatin1String("create table c_part (id INTEGER primary key autoincrement, display_val text);"));
+            if (!ok){
+                dumpError(query.lastError());
+            }
+
+            qDebug() << Q_FUNC_INFO << " db tables list " << db.tables();
+        }else{
+            dumpError(query.lastError());
         }
-        return ok;
+
     }
+
+    return ok;
+}
+
+bool Db_GateWay::fillSTable()
+{
+    bool ok = true;
+    {
+        QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
+        QSqlQuery query (db);
+
+        ok &= query.exec("DELETE FROM s_part;");
+        //Заполним таблицы S [0-15]  значениями
+        if (ok){
+            for (int i=1;i<16;i++){
+                ok &= query.exec(QObject::tr("INSERT INTO \"s_part\" (display_val) VALUES('S%1');")
+                                              .arg(i,0,10)
+                                 );
+                if (!ok){
+                    dumpError(query.lastError());
+                }
+            }
+        }else{
+            dumpError(query.lastError());
+        }
+    }
+    return ok;
+}
+
+bool Db_GateWay::fillCTable()
+{
+    bool ok = true;
+    {
+        QSqlDatabase db  = QSqlDatabase::database(QLatin1String("MAIN_CON"),true);
+        QSqlQuery query (db);
+        ok &= query.exec("DELETE FROM c_part;");
+        //Заполним таблицы C[0-1024] значениями
+        if (ok){
+            db.transaction();
+            for (int i=1;i<1025;i++){
+                ok &= query.exec(QObject::tr("INSERT INTO \"c_part\" (display_val) VALUES('C%1');")
+                                              .arg(i,0,10)
+                                 );
+                if (!ok){
+                    dumpError(query.lastError());
+                }
+            }
+            db.commit();
+        }else{
+            dumpError(query.lastError());
+        }
+    }
+    return ok;
 }
 
 int Db_GateWay::compare(const QString &M1, const QString & M2)

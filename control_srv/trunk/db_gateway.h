@@ -25,9 +25,13 @@ public:
 
 signals:
     /**
+      * @fn void informationToClient(const QString &c_uuid,const QString &info);
       * @brief Отравляется когда сервер хочет отправить клиенту информационное сообщение
       */
     void informationToClient(const QString &c_uuid,const QString &info);
+
+    void setDataBaseSlice (const QString &m_c_uuid, const QByteArray &m_data);
+
     void userListSaved(const QString &c_uuid,bool state);
     void sendEventMessageInfo(QString eMsg,
                               VPrn::EventLogMessageId eventCode,
@@ -55,7 +59,7 @@ public slots:
     void closeMainDb();
 
     /**
-      * @fn void getBaseSlice(const QString &c_uuid,const QString &login,const QString &mandat);
+      * @fn void getDataBaseSlice(const QString &c_uuid,const QString &login,const QString &mandat);
       * @param const QString &c_uuid - индентификатор клиента который инициировал запрос
       * @param const QString &login  - логин пользователя
       * @param const QString &mandat - мандат пользователя
@@ -64,10 +68,11 @@ public slots:
       * от клиента. Синхро - это отдельная таблица из 3-х полей PRN,USR,ATR каждое поле содержит номер время последней модификации
       * соответствующей таблицы
       */
-    void getBaseSlice(const QString &c_uuid,const QString &login,const QString &mandat);
+    void getDataBaseSlice(const QString &c_uuid,const QString &login,const QString &mandat);
 
 
 private:
+    bool m_DriverValid;
     /**
       * @fn int getUserId(QSqlDatabase db,const QString &login, int s_id, int c_id);
       * @param QSqlDatabase db  подключение к рабочей БД
@@ -80,9 +85,11 @@ private:
     int getUserId(QSqlDatabase db,const QString &login, int s_id, int c_id);
     int getPartTableId(QSqlDatabase db,const QString &table, const QString &value);
 
-    //bool isDBValid(QSqlDatabase db);
+    bool createMainDB();
 
-    bool createMainDB(QSqlDatabase db);
+
+    bool fillSTable();
+    bool fillCTable();
 
     bool initDB(QSqlDatabase db);
     void dumpError (const QSqlError & lastError);
@@ -101,13 +108,6 @@ private:
       */
     int compare(const QString &M1, const QString & M2);
 
-
-
-
-    QSqlTableModel *prnModel;
-    QSqlTableModel *usrModel;
-    QSqlTableModel *prn_usrModel;
-    bool m_DriverValid;
     QString m_dbFile;
 
 };
