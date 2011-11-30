@@ -4,7 +4,9 @@ TEMPLATE += app
 TARGET = surd_gui
 CONFIG += warn_on \
     qt \
-    precompile_header
+    precompile_header \
+    debug
+    
 GLOBAL_DIR = ../../common/trunk
 BUILD_DIR = ../../build
 EXTERN_DIR = ../../extern_src
@@ -39,19 +41,18 @@ HEADERS += mainwindow.h \
     $${GLOBAL_DIR}/config.h \
     qledindicator.h \
     engine.h \
-    networkclient.h \
-    form.h \
+    $${GLOBAL_DIR}/networkclient.h \
     exttreeview.h \
-    editprinterproperty.h
+    editprinterproperty.h \
+    localdb.h
 SOURCES += main.cpp \
     mainwindow.cpp \
     $${GLOBAL_DIR}/message.cpp \
     qledindicator.cpp \
     engine.cpp \
-    networkclient.cpp \
-    form.cpp \
+    $${GLOBAL_DIR}/networkclient.cpp \
     exttreeview.cpp \
-    editprinterproperty.cpp
+    editprinterproperty.cpp \
+    localdb.cpp
 RESOURCES = images.qrc
-TRANSLATIONS = auditor_ru.ts
-FORMS += form.ui
+TRANSLATIONS = surd_gui_ru.ts
