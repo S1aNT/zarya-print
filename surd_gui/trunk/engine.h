@@ -2,11 +2,10 @@
 #define ENGINE_H
 
 #include <QObject>
-#include <QStandardItemModel>
-#include <QMap>
 
 #include "mytypes.h"
 #include "message.h"
+#include "networkclient.h"
 
 using namespace VPrn;
 
@@ -17,35 +16,47 @@ public:
     explicit Engine(QObject *parent = 0);
     ~Engine();
 
-    QStandardItemModel *model(){return data_model;}
-    QStandardItemModel *prnModel(){return prnInfoModel;}
-public slots:
-    void getUserId();
-    void parseNetworkMessage(const Message & msg);
-    /**
-      * @brief Заполняет модель Юзер!Мандат!ID для принтера с ID = prnID
-      * и добавляет туда список всех пользователей
-      */
-    void getUsersListForPrinter(qint32 prnId);
+
+
+    void setServer(const QString &host=QString(),qint16 port=0);
 
 signals:
+    void connected();
+    void authUserPass();
     void error(VPrn::AppErrorType errCode,QString error_message);
     void definedAuthData(const QString &login, const QString & mandat);
-private:
-    /**
-      * @fn void updateData();
-      * @brief Обновляет данные в моделях СПИСОК_ПРИНТЕРОВ, СПИСОК_ПОЛЬЗОВАТЕЛЕЙ
-      */
-    void updateData();
+    void saveBaseSlice(QByteArray *data);
 
-    QStandardItemModel *data_model;
-    QStandardItemModel *prnInfoModel;
+public slots:
+
+
+    void getUserId();
+    void parseNetworkMessage(const Message & msg);
+
+private slots:
+
+    /**
+      * @fn void authUser();
+      * @brief Формируем запрос к УС в ответе получим данные :
+      * @li Список принтеров в системе защищенной печати
+      * @li Список пользователей в системе защищенной печати
+      * @li Расширенные атрибуты каждого принтера (Метка секретности, список допущенных пользователей)
+      * Данные сохраняются в локальной БД приложения все изменения отправляются на сервер
+      * Ограничения. Список принтеров будет ограничен мандатом пользователя, не выше чем его мандат
+     */
+
+    void authUser();
+
+private:
+
+
+    NetWorkClient *m_netClient;
+
+
+
     QString m_login;
     QString m_mandat; // S0-15:C0-1024
 
-    //PrinterInfoList prnList;
-    //UserInfoList    userList;
-    //QMap<qint32,qint32> relPrnUsr; // Таблица связей Принтер->Допущенные поьзователи
 };
 
 #endif // ENGINE_H
