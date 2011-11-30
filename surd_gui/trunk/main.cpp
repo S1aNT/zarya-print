@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForLocale(codec);
     QtSingleApplication app(argc, argv, true);
 
-    installLog("BPusk",QObject::trUtf8("Техносерв А/Г"));
+    //installLog("SURD_GUI",QObject::trUtf8("Заря"));
 
     if (app.sendMessage(QObject::trUtf8("Потребован повторный запуск приложения!"))
         || app.isRunning())

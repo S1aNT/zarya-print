@@ -7,11 +7,12 @@
 #include "mytypes.h"
 #include "qledindicator.h"
 #include "engine.h"
-#include "networkclient.h"
-//#include "exttreeview.h"
+#include "localdb.h"
+
+
 
 QT_BEGIN_NAMESPACE
-class QAction;
+        class QAction;
 class QStackedWidget;
 class QFrame;
 class QCheckBox;
@@ -28,7 +29,7 @@ class QTreeView;
 class QModelIndex;
 QT_END_NAMESPACE
 
-namespace Ui {
+        namespace Ui {
     class MainWindow;
 }
 
@@ -46,23 +47,28 @@ public slots:
 
 
 private slots:
-    void checkAuthUser(const QString &login, const QString &mandat);
-    void networkEnabled();
+
+    void netLedEnabled();
+    void authLedEnabled();
     void do_error(VPrn::AppErrorType eCode,QString e_msg);
     void editSelectItem();
 
-    void checkDataFill();
-    void sendDataToNet();
     void help();
 
+/**
+      * @fn void enableEditMode();
+      * @param state Триггер вкл/выкл кнопки редактирования
+      * @brief Режим редактирования становиться доступным для пользователя только после выполнения
+      * условий 1. Есть связь с УС ,2. Пользователь авторизован на УС для этой работы
+      */
+    void enableEditMode();
+
 private:        
-    Engine *m_engine;
-    NetWorkClient *m_netClient;
-    QDataWidgetMapper *mapper;
+    LocalDB *localdb;
+    Engine  *engine;
 
     QString serverName;
     qint32 serverPort;
-
 
     QDesktopWidget desktop;
     QRect desktop_avail;
@@ -78,11 +84,8 @@ private:
 
     QTreeView      *prnTreeView;
 
-    /*
-
-*/
     QLedIndicator *led_auth;
-    QLedIndicator *led_surd;   
+    QLedIndicator *led_net;
 
     QFrame         *line;
     QErrorMessage  *myEMsgBox;
@@ -91,6 +94,8 @@ private:
 
     bool readConfig(const QString &app_dir);
     void connectAll();
+
+
 };
 
 #endif // MAINWINDOW_H
