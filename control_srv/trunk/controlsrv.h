@@ -6,7 +6,7 @@
 
 #include "localserver.h"
 #include "msgdispatcher.h"
-//#include "db_gateway.h"
+#include "db_gateway.h"
 
 #include "errorlogger.h"
 
@@ -18,14 +18,16 @@ protected:
     void start();
     void pause();
     void resume();    
-protected:
-    ErrorLogger *eLogger;
-    LocalServer *locServer;    
-    MsgDispatcher *msgDispatcher;
-    //DB_GateWay * db_gateway;
-    quint16 Port;
+
 
 private:
+    ErrorLogger *eLogger;
+    LocalServer *locServer;
+    MsgDispatcher *msgDispatcher;
+    Db_GateWay * db_gateway;
+    QString HostName;
+    quint16 Port;
+    QString mainDB;
 
     bool readConfig();
 };
