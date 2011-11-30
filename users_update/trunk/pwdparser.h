@@ -13,19 +13,21 @@ class PwdParser : public QObject
     Q_OBJECT
 public:
     explicit PwdParser(QObject *parent = 0);
-    ~PwdParser();
 
-    int findAndSendUser(const QString &serverName, int serverPort,int startPid);
+    void setStartPid(qint16 sPid){m_pid = sPid;}
+
 
 signals:
     void sendEventMessageInfo(QString eMsg,
                               VPrn::EventLogMessageId eventCode,
                               VPrn::EventLogType      evenType,
                               VPrn::EventLogCategory  eventCategory = VPrn::eCatId_Empty);
-    void foundUser(const QString &u_name);
+    void foundUsers(QStringList &u_list);
 public slots:
+    void startFindUsers();
+
 private:
-    NetClient *client;
+    qint16 m_pid;
 
     /**
       * @fn void getUsers4File(const QString &pfile,int start_uid);

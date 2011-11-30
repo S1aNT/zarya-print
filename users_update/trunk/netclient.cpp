@@ -16,22 +16,20 @@ NetClient::NetClient(QTcpSocket *parent)
     connect(this, SIGNAL(readyRead()),
             this,   SLOT(readyRead()));
 
-    connect(this, SIGNAL(error(QLocalSocket::LocalSocketError)),
-            this,   SLOT(prepareError(QLocalSocket::LocalSocketError)));
+    connect(this, SIGNAL(error(QAbstractSocket::SocketError)),
+            this,   SLOT(prepareError(QAbstractSocket::SocketError)));
 
 
 }
 
-void NetClient::addUser(const QString &user_name)
+
+//------------------- Public slots  -------------------------------------------
+
+void NetClient::sendMessage(const Message &msg)
 {
-    if (!user_name.isEmpty()){
-        Message message( this );
-        message.setType(VPrn::SaveUserToBase);
-        message.setMessageData( user_name.toUtf8() );
-        this->write(message.createPacket());
-        //qDebug() << Q_FUNC_INFO << " Write to socket :" << user_name;
-    }
+    this->write( msg.createPacket() );
 }
+
 //------------------- Private slots -------------------------------------------
 void NetClient::connected()
 {
@@ -44,7 +42,7 @@ void NetClient::connected()
 void NetClient::readyRead()
 {
     QDataStream in ( this );
-    in.setVersion(QDataStream::Qt_3_0); // Для совместимости с серверной частью
+    in.setVersion(QDataStream::Qt_4_0); // Для совместимости с серверной частью
 
     while (this->bytesAvailable() > 0){
         if (packetSize == -1) {

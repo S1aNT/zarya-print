@@ -19,8 +19,9 @@ signals:
                               VPrn::EventLogCategory  eventCategory = VPrn::eCatId_Empty);
 
     void reciveMessage(const Message &msg);
-public slots:
-    void addUser(const QString &user_name);
+public slots:        
+    void sendMessage(const Message &msg);
+
 private slots:
 
     void connected();

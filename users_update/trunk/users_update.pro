@@ -7,6 +7,7 @@ CONFIG   += console
 CONFIG   -= app_bundle
 CONFIG   += precompile_header \
             warn_on
+CONFIG   +=debug
 
 TEMPLATE = app
 GLOBAL_DIR =../../common/trunk
@@ -36,12 +37,15 @@ INCLUDEPATH += $${GLOBAL_DIR}
 
 HEADERS += $${GLOBAL_DIR}/mytypes.h \
            $${GLOBAL_DIR}/message.h \
+           $${GLOBAL_DIR}/config.h \
     pwdparser.h \
-    netclient.h
+    netclient.h \
+    netmsgsender.h
 
 SOURCES += main.cpp \
            $${GLOBAL_DIR}/message.cpp \
     pwdparser.cpp \
-    netclient.cpp
+    netclient.cpp \
+    netmsgsender.cpp
 
 TRANSLATIONS = users_update_ru.ts
