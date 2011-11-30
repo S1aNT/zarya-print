@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="user.png">../../images/user-32.png</file>
+	<file alias="printer.png">../../images/fileprint.png</file>
+	<file alias="printer_logo.png">../../images/printer_logo.png</file>
+        <file alias="zoomin.xpm">../../images/zoomminus.xpm</file>
+        <file alias="zoomout.xpm">../../images/zoomplus.xpm</file>
+        <file alias="zoomtofit.xpm">../../images/zoomtofit.xpm</file>
+        <file alias="zoomtofull.xpm">../../images/original.xpm</file>
+    </qresource>
+</RCC>
