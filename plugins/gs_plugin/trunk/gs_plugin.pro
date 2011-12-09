@@ -40,7 +40,7 @@ HEADERS += $${GLOBAL_DIR}/pre_header.h \
     gs_plugin.h \
     $${INTERFACE_DIR}/igs_plugin.h \
     $${GLOBAL_DIR}/mytypes.h \
-    proc_thread.h 
+    $${GLOBAL_DIR}/proc_thread.h 
 
 SOURCES = gs_plugin.cpp \
-    proc_thread.cpp
+    $${GLOBAL_DIR}/proc_thread.cpp
