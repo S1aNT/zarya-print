@@ -11,7 +11,7 @@
 #include "networkclient.h"
 #include "templatesdatagateway.h"
 #include "message.h"
-
+#include <QMap>
 
 #ifdef D_MYDEBUG
 #include "fakenetans.h"
@@ -49,10 +49,13 @@ signals:
     void serverInfo(QString,QString);
     void setCardValid(bool);
 
+    void showPrnState(QString);
+    void printNextCopy();
 public slots:
     void beginPrintCurrentDoc();
     void genFullPreView();
     void genPartPreView();
+
 
 private slots:
     void saveAuth(const QString &user,const QString &role,
@@ -61,10 +64,12 @@ private slots:
     void doConnect();
     void gsPluginReady(const QString &wDir);
     void docReady4work(qint32 pCount);
+
+
     void docConvertedToPdf();    
     void docMergedWithTemplate();
     void generatePreViewFinished();
-
+    void setReady4Print(){ready4Print = true;}
     /**
       * @fn void itemChangedCardsModel(QStandardItem* item);
       * @brief При изменении элемента ячейки происходит проверка, что
@@ -92,11 +97,15 @@ private:
     QString spoolDir;
     QString localTDir;
     QString globalTDir;
+    bool ready4Print;
+
+
     QString workFile;
     QString m_user;
     QString m_role;
     QString m_mls;
     QString m_mcs;
+
     QStringListModel   *stampListModel;
     QStandardItemModel *printerModel;
     QStandardItemModel *cardModel;
@@ -110,10 +119,16 @@ private:
     QString workingDir;
     int preViewMode;
 
+
+
     bool readConfig(const QString &app_dir);
     bool loadPlugins();
     bool isSavePrinterToModel (QByteArray data);
     void findTemplates(const QString &t_path);   
+
+    bool isReady4Print(){return ready4Print;}
+    void printThisFile(const QString &fileName,int copyes);
+    qint32 getCompresedFile(const QString &fileName,QByteArray &data);
 };
 
 #endif // CONTROLLER_H

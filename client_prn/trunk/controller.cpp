@@ -6,24 +6,26 @@
 #include <QProcess>
 #include <QFileInfoList>
 #include <QModelIndex>
+#include <QDateTime>
+
 
 Controller::Controller(QObject*parent)
-        :QObject(parent)
-        , myGs_plugin(0)
-        , myAuth_plugin(0)
-        , m_netClient(0)
-        , tDataGW(0)
-        , serverName(QString())
-        , serverPort(-1)
-        , gsBin(QString())
-        , pdftkBin(QString())
-        , spoolDir(QString())
-        , localTDir(QString())
-        , globalTDir(QString())
+    :QObject(parent)
+    , myGs_plugin(0)
+    , myAuth_plugin(0)
+    , m_netClient(0)
+    , tDataGW(0)
+    , serverName(QString())
+    , serverPort(-1)
+    , gsBin(QString())
+    , pdftkBin(QString())
+    , spoolDir(QString())
+    , localTDir(QString())
+    , globalTDir(QString())
+    , ready4Print(false)
 
 
 {
-
     stampListModel = new QStringListModel(this);
     pictureListModel= new QStringListModel(this);
 
@@ -213,11 +215,63 @@ void Controller::clearPreViewFiles()
 
 void Controller::beginPrintCurrentDoc()
 {
+    /** @todo Как остановить процесс печати?  */
+    QMap <int,QString> orderList;
 
+    for (int p_copy=VPrn::FirstPage; p_copy <= VPrn::FirstPageN5;p_copy++){
+        orderList = myGs_plugin->getOrderList(p_copy);
+        if (!orderList.isEmpty()){
+            emit showPrnState(QObject::trUtf8("Начата печать экземпляра №%1").arg(p_copy,0,10));
+
+            QMapIterator<int, QString> i(orderList);
+            int pages =cardModel->data( cardModel->index(0,VPrn::cards_PAGE_COUNT), Qt::EditRole).toInt();
+            int copy =1;
+            QString infoStr;
+            while (i.hasNext()) {
+                i.next();
+                //qDebug() << i.key() << ": " << i.value();
+                switch (i.key()){
+                case 1:
+                    infoStr = QObject::trUtf8("Лицевая сторона первого листа отправлена на печать");
+
+                    break;
+                case 3:
+                    infoStr = QObject::trUtf8("Лицевая сторона последующих листов отправлена на печать");
+                    if (pages >1){
+                        copy = pages -1;
+                    }
+                    break;
+                case 5:
+                    infoStr = QObject::trUtf8("Обратная сторона документа отправлена на печать");
+                    if (pages >1){
+                        copy = pages -1;
+                    }
+                    break;
+                case 7:
+                    infoStr = QObject::trUtf8("Фонарик отправлен на печать");
+                    break;
+                default:
+                    break;
+                }
+                if (!infoStr.isEmpty() && QFile::exists( i.value())){
+                    emit showPrnState(infoStr);
+                    this->printThisFile( i.value(),copy);
+                }
+            }
+            emit showPrnState(QObject::trUtf8("Окончена печать экземпляра №%1").arg(p_copy,0,10));
+        }
+    }
 }
 
 void Controller::genFullPreView()
 {
+    /**
+      *@brief Для печати документа формируем пакет печати для каждого варианта,
+      * который включает в себя:
+      *@li Первые страницы + последующие документа объединенный в один файл (опционально)
+      *@li Обратные страницы документа (опционально)
+      *@li Фонарик документа (опционально)
+      */
     tDataGW->prepareTemplate(currentTemplate);
     preViewMode = 1;
 }
@@ -227,6 +281,7 @@ void Controller::genPartPreView()
     tDataGW->prepareTemplate(currentTemplate);
     preViewMode = 2;
 }
+
 
 //------------------------- Private slots --------------------------------------
 void Controller::parseNetworkMessage(const Message & msg)
@@ -290,14 +345,14 @@ void Controller::gsPluginReady(const QString &wDir)
     tDataGW->setWorkingDir( workingDir);
 }
 
-/**
-  * @fixme
-  * @todo Возникает странное как только выполняется setItem модель очищается
-  * т.е те значения которые ввел пользолватель пропадают
-  */
-
 void Controller::docReady4work(qint32 pCount)
 {
+    /**
+      * @fixme
+      * @todo Возникает странное как только выполняется setItem модель очищается
+      * т.е те значения которые ввел пользолватель пропадают
+      */
+
     cardModel->setItem(0,VPrn::cards_PAGE_COUNT,new QStandardItem(QObject::trUtf8("%1").arg(pCount,0,10)));
 }
 
@@ -313,10 +368,7 @@ void Controller::docMergedWithTemplate()
         myGs_plugin->convertPdf2Png(true);
         break;
     case 2:
-        myGs_plugin->convertPdf2Png(false);
-        break;
-    case 3:
-        // печать документа без предпросмотра
+        myGs_plugin->convertPdf2Png(false);           
         break;
     }
 }
@@ -339,7 +391,6 @@ void Controller::generatePreViewFinished()
 
 void Controller::itemChangedCardsModel(QStandardItem* item)
 {
-    /// @todo fix magic number
     QModelIndex idx = cardModel->indexFromItem(item);
     qDebug() << Q_FUNC_INFO <<" idx= " << idx;
     if (idx.isValid()){
@@ -373,8 +424,6 @@ void Controller::itemChangedCardsModel(QStandardItem* item)
 
     }
 }
-
-
 
 //------------------------- Private --------------------------------------------
 bool Controller::readConfig(const QString &app_dir)
@@ -413,9 +462,9 @@ bool Controller::readConfig(const QString &app_dir)
     QDir testDir;
 
     bool ok = !serverName.isEmpty() &&  !serverPort !=-1 &&
-              QFile::exists(gsBin) && QFile::exists(pdftkBin) &&
-              testDir.exists(spoolDir) && testDir.exists(localTDir) &&
-              testDir.exists(globalTDir);
+            QFile::exists(gsBin) && QFile::exists(pdftkBin) &&
+            testDir.exists(spoolDir) && testDir.exists(localTDir) &&
+            testDir.exists(globalTDir);
 
     if (ok){
         return true;
@@ -438,7 +487,7 @@ bool Controller::loadPlugins()
 
 
     if (pluginsDir.dirName().toLower() == "debug" ||
-        pluginsDir.dirName().toLower() == "release")
+            pluginsDir.dirName().toLower() == "release")
         pluginsDir.cdUp();
 
 #if defined(Q_OS_MAC)
@@ -466,6 +515,9 @@ bool Controller::loadPlugins()
                             );
                     connect(plugin,SIGNAL(docReady4work( qint32 )),
                             this, SLOT(docReady4work(qint32))
+                            );
+                    connect(plugin,SIGNAL(docReady4print( )),
+                            this, SLOT(setReady4Print())
                             );
                     connect(plugin,SIGNAL(docConvertedToPdf( )),
                             this, SLOT(docConvertedToPdf())
@@ -557,4 +609,55 @@ void Controller::findTemplates(const QString &t_path)
 
 }
 
+void Controller::printThisFile(const QString &fileName,int copyes)
+{
+    QByteArray msg_body;
+    QByteArray file_data;
+    qint32     file_size = getCompresedFile(fileName,file_data);
 
+    //Формируем файл для печати сжатый
+    Message net_msg(this);
+    net_msg.setType(VPrn::Que_PrintThisFile);
+    /**
+                      * @short Que_PrintThisFile Печать файла на выбранный пользователем принтер
+                      * @param (QString) JobID (уникально для каждого экз. документа)
+                      * @param (QString) Имя принтера (очереди печати на CUPS)
+                      * @param (qint32)   copy_number  число копий 1-100
+                      * @param (QString) user_name    имя пользователя
+                      * @param (QString) job_title    имя задания
+                      * @param (qint32) array_size   размер не сжатого буфера
+                      * @param (QByteArray) файл для печати в формате QByteArray (сжатый)
+                      */
+    QDataStream out(&msg_body, QIODevice::WriteOnly );
+    out.setVersion(QDataStream::Qt_4_0);
+
+    /** @todo как правильно записать S1:S15:C0-C1024 */
+    //Уникальный номер представляет собой QDateTime
+    out     << QDateTime::currentDateTime().toTime_t()
+            << cardModel->data( cardModel->index(0,VPrn::cards_MB_NUMBER), Qt::EditRole).toString()
+            << cardModel->data( cardModel->index(0,VPrn::cards_PRINTER_NAME), Qt::EditRole).toString()
+            << copyes
+            << QObject::trUtf8("%1:%2:%3:%4").arg( m_user,m_role,m_mls,m_mcs)
+            << cardModel->data( cardModel->index(0,VPrn::cards_DOC_NAME), Qt::EditRole).toString()
+            << file_size
+            << file_data;
+    net_msg.setMessageData(msg_body);
+    m_netClient->reSendNetworkMessage(net_msg);
+}
+
+qint32 Controller::getCompresedFile(const QString &fileName,
+                                    QByteArray &data)
+{
+    data.clear();
+
+    QFile file_in(fileName);
+
+    if (!file_in.open(QIODevice::ReadOnly) ){
+        return 0;
+    }
+    QByteArray byteArray_in = file_in.readAll();
+    file_in.close();
+    data = qCompress(byteArray_in);
+    /** @todo возможна ошибка так как файл может быть qint64 а буфер не больше int*/
+    return data.size();
+}

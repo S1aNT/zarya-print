@@ -9,7 +9,7 @@
 
 #include "mainwindow.h"
 #include "infowindow.h"
-
+#include "prnsenddlg.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent)
@@ -177,7 +177,7 @@ void MainWindow::connectAll()
     connect(controller,SIGNAL(needUpdatePicturesList()),
             preViewPage,SLOT(updatePictures())
             );
-    connect(preViewPage,SIGNAL(enablePrintDoc()),
+    connect(preViewPage,SIGNAL( enablePrintDoc() ),
             this,SLOT(enableNext())
             );
     connect(controller,SIGNAL(serverInfo(QString,QString)),
@@ -223,8 +223,14 @@ void MainWindow::do_next()
 
         break;
     case VPrn::page_Preview:
-        controller->beginPrintCurrentDoc();
-#ifdef D_MYDEBUG
+        {
+            PrnSendDlg *prnDlg = new PrnSendDlg(this);
+            connect (controller,SIGNAL(showPrnState(QString)),prnDlg,SLOT(showPrnState(QString)));
+            connect (controller,SIGNAL(printNextCopy()),prnDlg,SLOT(printNextCopy()));
+            controller->beginPrintCurrentDoc();
+            prnDlg->exec();
+        }
+#ifdef D_MYDEBUG_OLD
         this->fakePrint();
 #endif
         break;
@@ -275,12 +281,12 @@ void MainWindow::showInfo(const QString &title,const QString &txt)
     info->exec();
 }
 
-#ifdef D_MYDEBUG
+#ifdef D_MYDEBUG_OLD
 void MainWindow::fakePrint()
 {
-   QMessageBox msgbox;
-   msgbox.setText(QObject::trUtf8("Документ успешно распечатан."));
-   msgbox.exec();
+    QMessageBox msgbox;
+    msgbox.setText(QObject::trUtf8("Документ успешно распечатан."));
+    msgbox.exec();
 }
 #endif
 

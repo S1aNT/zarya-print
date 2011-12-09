@@ -35,7 +35,7 @@ private slots:
     void enableNext();
     void showInfo(const QString &title,const QString &txt);
 
-#ifdef D_MYDEBUG
+#ifdef D_MYDEBUG_OLD
     void fakePrint();
 #endif
 private:

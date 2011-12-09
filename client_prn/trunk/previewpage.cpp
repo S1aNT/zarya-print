@@ -18,7 +18,7 @@ PreViewPage::PreViewPage(QWidget *parent)
     : QWidget(parent)
     ,leftFrame(0)
     ,rightFrame(0)
-    ,thumbSize(100,100)
+    ,thumbSize(100,100)   
 {
     this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::MinimumExpanding);
     this->setWindowTitle(QObject::trUtf8("Предварительный просмотр сформированного документа."));
@@ -156,11 +156,7 @@ void PreViewPage::updatePictures()
     leftFrame->setPixMapList(imageThumbItems);
     rightFrame->setPixMapList(imageFullItems);
     emit enablePrintDoc();
-}
 
-bool PreViewPage::enableNext()
-{
-    return true;
 }
 
 

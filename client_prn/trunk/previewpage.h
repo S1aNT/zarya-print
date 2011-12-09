@@ -26,8 +26,8 @@ public:
     void setModel(QStringListModel *m);
 
 signals:
-    //void printCurrentDoc();
     void enablePrintDoc();
+
 
 public slots:
     void updatePictures();
@@ -47,6 +47,8 @@ private:
     ViewPort *leftFrame;
     ViewPort *rightFrame;
     QSize thumbSize;
+
+
     QLabel *topLabel;
     PixmapList imageFullItems;
     PixmapList imageThumbItems;
