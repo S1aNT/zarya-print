@@ -69,6 +69,47 @@ QStringList GS_plugin::findFilesInDir(const QString &tDir,
 
     return files;
 }
+
+QMap <int,QString > GS_plugin::getOrderList(int p_copy) const
+{
+    QMap <int,QString> orderList;
+
+    QString copy_dir = QObject::trUtf8("%1/%2-copy").arg(workDir).arg(p_copy,0,10);
+    QStringList t_files = this->findFilesInDir(copy_dir,QStringList()<<"*_out.pdf");
+
+    if (t_files.count() !=-1){
+        // Формируем задание для данного экземпляра
+        orderList.insert(0,QString("111"));
+        orderList.insert(2,QString("222"));
+        orderList.insert(4,QString("333"));
+        orderList.insert(6,QString("444"));
+        orderList.insert(8,QString("555"));
+
+        for (int i=0; i< t_files.size();i++){
+            QString in_file = t_files.at(i);
+            QRegExp rx("/(.+)/(.+)/(.)-copy/(.+_out).pdf");;
+            if(rx.indexIn( in_file ) != -1){
+                // Наш файлик можно обрабатывать
+                //copy_num   = rx.cap(3);
+                QString page_type  = rx.cap(4);
+                if ( page_type.compare("firstpage_out",Qt::CaseInsensitive) == 0){
+                    orderList.insert(1,in_file);
+                }
+                if ( page_type.compare("otherpage_out",Qt::CaseInsensitive) == 0){
+                    orderList.insert(3,in_file);
+                }
+                if ( page_type.compare("oversidepage_out",Qt::CaseInsensitive) == 0){
+                    orderList.insert(5,in_file);
+                }
+                if ( page_type.compare("lastpage_out",Qt::CaseInsensitive) == 0){
+                    orderList.insert(7,in_file);
+                }
+            }
+        }
+    }
+    return orderList;
+}
+
 //------------------------------------------ Public slots -------------------------------------------------
 void GS_plugin::convertPs2Pdf(const QString &input_fn)
 {
@@ -95,8 +136,55 @@ void GS_plugin::convertPs2Pdf(const QString &input_fn)
 }
 
 void GS_plugin::catFirstPages()
-{
 
+{
+    emit docReady4print();
+    return;
+    /*
+
+    QString copy_dir;
+    this->incJobsCount("cat_pdf");
+
+    for (int p_copy=VPrn::FirstPage; p_copy <= VPrn::FirstPageN5;p_copy++){
+        copy_dir = QObject::trUtf8("%1/%2-copy").arg(workDir).arg(p_copy,0,10);
+        QStringList out_list = findFilesInDir(copy_dir,QStringList()<<"firstpage_out.pdf"
+                                              <<"otherpage_out.pdf"
+                                              );
+        QString fileA;
+        QString fileB;
+        QString copy_num;
+        QString page_type;
+        QString outFile;
+        for (int j=0;j<out_list.size();j++){
+            QString line = out_list.at(j);
+            QRegExp rx("/(.+)/(.+)/(.-copy)/(.+)_out.pdf");
+            if (rx.indexIn(line) != -1){
+
+                copy_num = rx.cap(3);
+                page_type  = rx.cap(4);
+                if (page_type.compare("firstpage",Qt::CaseInsensitive) == 0){
+                    fileA = line;
+                    outFile = QString("%1/%2/face_pages_out.pdf")
+                            .arg(workDir,copy_num);
+                    qDebug() << Q_FUNC_INFO << "outFile=" << outFile;
+                }
+                if (page_type.compare("otherpage",Qt::CaseInsensitive) == 0){
+                    fileB = line;
+                }
+
+            }
+        }
+
+        if (!fileA.isEmpty()){
+            if (!fileB.isEmpty()){
+                catPdf(fileA,fileB,outFile);
+            }else{
+                QFile::rename(fileA,outFile);
+            }
+        }
+    }
+    this->isJobFinished("cat_pdf");
+    */
 }
 
 void GS_plugin::mergeWithTemplate()
@@ -181,10 +269,10 @@ void GS_plugin::convertPdf2Png(bool mode)
                 QString out_file;
                 if (mode){
                     out_file = QString("-sOutputFile=%1/%2/%3_\%d.png")
-                                .arg(workDir,copy_num,page_type);
+                            .arg(workDir,copy_num,page_type);
                 }else{
                     out_file = QString("-sOutputFile=%1/%2/%3_0.png")
-                                .arg(workDir,copy_num,page_type);
+                            .arg(workDir,copy_num,page_type);
                 }
                 this->pdf2png(in_file,out_file,mode);
             }
@@ -242,8 +330,15 @@ void GS_plugin::threadFinish(const QString &jobKey,int code,
         break;
     case VPrn::job_ConvertToPng:
         if (this->isJobFinished("convert_pdf2png")){
-            emit generatePreViewFinished();
+            //Исходные файлы преобразовались в png оъединим лицевые страницы
+            this->catFirstPages();
+            emit generatePreViewFinished();            
             qDebug() << Q_FUNC_INFO << " emit generatePreViewFinished() ";
+        }
+        break;
+    case VPrn::job_CatPages:
+        if (this->isJobFinished("cat_pdf")){
+            emit docReady4print();
         }
         break;
     default:
@@ -393,16 +488,16 @@ void GS_plugin::catPdf(const QString &file_nameA,const QString &file_nameB,
 {
 
     QStringList args;
+
     args.append(QString("A=%1").arg(file_nameA));
     args.append(QString("B=%1").arg(file_nameB));
-    args.append("cat A B output ");
+    args.append("cat A B output");
     args.append(output_name);
+    args.append("verbose");
 
+    this->incJobsCount("cat_pdf");
     start_proc(pdftkBin,args,VPrn::job_CatPages);
 }
-
-
-
 
 void GS_plugin::mergePdf(const QString &in_pdf,
                          const QString &back_pdf,const QString &out_pdf)

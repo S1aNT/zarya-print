@@ -30,6 +30,7 @@ public:
     void init(const QString &gs_bin,const QString &pdftk_bin,
               const QString &temp_folder);
     void clear(); 
+    QMap <int,QString > getOrderList(int p_copy) const;
     QStringList findFilesInDir(const QString &tDir, /* Каталог поиска*/
                                const QStringList &filters /*Тип файлов*/
                                ) const;
@@ -57,6 +58,10 @@ signals:
       * подсчета числа страниц и разбиения на 1 и последующие страницы
       */
     void docReady4work(qint32 pagecount);
+    /**
+      *@brief Документ - все экземпляры готовы к печати
+      */
+    void docReady4print();
     void docMergedWithTemplate();
     void generatePreViewFinished();
 
