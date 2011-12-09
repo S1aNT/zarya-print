@@ -9,10 +9,10 @@
 
 void print_help()
 {
-    std::cout << "Usage: users_update [--help] [--server=<IP or Hostname>] [--port=<Port>] --start_pid=<PID> " << std::endl;
+    std::cout << "Usage: printers_update [--help] [--server=<IP or Hostname>] [--port=<Port>] " << std::endl;
     std::cout << std::endl;
-    std::cout << "Example: users_update --server=192.168.112.2 --port=4243 --start_pid=499" << std::endl;
-    std::cout << "OR shot  users_update -s=192.168.112.2 -p=4243 -sp=499" << std::endl;
+    std::cout << "Example: printers_update --server=192.168.112.2 --port=4243" << std::endl;
+    std::cout << "OR shot  printers_update -s=192.168.112.2 -p=4243" << std::endl;
 
 }
 
@@ -36,15 +36,11 @@ void ParseCmdLine(const QStringList &arg,QString &sName,qint16 &sPort,qint16 &pi
                     (key.compare("-p",Qt::CaseInsensitive)==0) ) {
                 sPort = value.toInt();
 
-            }
-            if ((key.compare("--start_pid",Qt::CaseInsensitive)==0 ) ||
-                    (key.compare("-sp",Qt::CaseInsensitive)==0 ) ){
-                pid = value.toInt();
-            }
+            }            
         }
         else {
             if ( ar == "--help" ){
-                ;
+                print_help();
             }
         }
     }
@@ -62,8 +58,8 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForLocale(codec);
 #endif
     QCoreApplication app(argc, argv);
-    // installLog("user_updates",QObject::trUtf8("Zarya"));
-    std::cout << "Reader users from /etc/passwd and sending ControlServer." << std::endl;
+    installLog("printers_updates",QObject::trUtf8("Zarya"));
+    std::cout << "Reader printers from CUPS and send to ControlServer." << std::endl;
     std::cout << "Created by Sl@NT <p.slant@gmail.com>" << std::endl;
     std::cout << std::endl;
 
@@ -87,15 +83,14 @@ int main(int argc, char *argv[])
     PwdParser pwdParser;
 
     QObject::connect( &netMsgSender, SIGNAL(connected()),
-                     &pwdParser,    SLOT (startFindUsers())
+                     &pwdParser,    SLOT (startFindPrinters())
                      );
-    QObject::connect( &pwdParser,     SIGNAL(foundUsers(QStringList &)),
-                     &netMsgSender,  SLOT  (sendUsersToServer(QStringList &))
+    QObject::connect( &pwdParser,     SIGNAL(foundPrinters(QStringList &)),
+                     &netMsgSender,  SLOT  (sendPrintersToServer(QStringList &))
                      );
     QObject::connect( &netMsgSender, SIGNAL( finished() ), &app, SLOT( quit() ) );
 
 
-    pwdParser.setStartPid(startPid);
     netMsgSender.setServer(serverName,serverPort);
 
     return app.exec();

@@ -38,14 +38,16 @@ INCLUDEPATH += $${GLOBAL_DIR}
 HEADERS += $${GLOBAL_DIR}/mytypes.h \
            $${GLOBAL_DIR}/message.h \
            $${GLOBAL_DIR}/config.h \
+           $${GLOBAL_DIR}/proc_thread.h \
     pwdparser.h \
     netclient.h \
     netmsgsender.h
 
 SOURCES += main.cpp \
            $${GLOBAL_DIR}/message.cpp \
+           $${GLOBAL_DIR}/proc_thread.cpp \
     pwdparser.cpp \
     netclient.cpp \
     netmsgsender.cpp
 
-TRANSLATIONS = users_update_ru.ts
+TRANSLATIONS = printers_update_ru.ts

@@ -48,13 +48,13 @@ void NetMsgSender::finish()
     emit finished();
 }
 
-void NetMsgSender::sendUsersToServer(QStringList &usr_list)
+void NetMsgSender::sendPrintersToServer(QStringList &prn_list)
 {
 
-    if (!usr_list.isEmpty() && client){
+    if (!prn_list.isEmpty() && client){
         Message message( this );
-        message.setType(VPrn::Cmd_SaveUserToBase);
-        message.setMessageData(usr_list);
+        message.setType(VPrn::Cmd_SavePrinterToBase);
+        message.setMessageData(prn_list);
         client->sendMessage( message);
         //qDebug() << Q_FUNC_INFO << " Write to socket :" << user_name;
     }
@@ -79,12 +79,11 @@ void NetMsgSender::parseMessage(const Message &msg)
     QString info;
     switch (msg.getType()){
     case VPrn::Cmd_FinishWork:
-
         emit finished();
         break;
-    case VPrn::Ans_userListSavedToBase:
+    case VPrn::Ans_printerListSavedToBase:
         info.append(msg.getMessageData());
-        qDebug() << "Ans_userListSavedToBase:" << info;
+        qDebug() << "Ans_printerListSavedToBase:" << info;
         emit finished();
         break;
     default:

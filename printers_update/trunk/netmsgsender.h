@@ -32,7 +32,7 @@ signals:
                               VPrn::EventLogCategory  eventCategory = VPrn::eCatId_Empty);
 public slots:
     void finish();
-    void sendUsersToServer(QStringList &usr_list);
+    void sendPrintersToServer(QStringList &prn_list);
     void sendMsgToServer(const Message &msg);
 
 private slots:
