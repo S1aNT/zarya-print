@@ -35,8 +35,7 @@ include($${EXTERN_DIR}/qt_single_apps/qtsingleapplication.pri)
 PRECOMPILED_HEADER = $${GLOBAL_DIR}/pre_header.h
 DEPENDPATH += .
 INCLUDEPATH += $${GLOBAL_DIR} \
-               $${IFACE_DIR}
-
+    $${IFACE_DIR}
 HEADERS += $${GLOBAL_DIR}/mytypes.h \
     $${GLOBAL_DIR}/message.h \
     $${GLOBAL_DIR}/config.h \
@@ -44,10 +43,10 @@ HEADERS += $${GLOBAL_DIR}/mytypes.h \
     $${GLOBAL_DIR}/mytypes.h \
     $${GLOBAL_DIR}/commands.h \
     $${GLOBAL_DIR}/myscene.h \
-    $${GLOBAL_DIR}/mytextitem.h \           
+    $${GLOBAL_DIR}/mytextitem.h \
     $${GLOBAL_DIR}/picitem.h \
     $${IFACE_DIR}/igs_plugin.h \
-    $${IFACE_DIR}/iauth_plugin.h \   
+    $${IFACE_DIR}/iauth_plugin.h \
     mainwindow.h \
     intropage.h \
     editcardpage.h \
@@ -59,13 +58,14 @@ HEADERS += $${GLOBAL_DIR}/mytypes.h \
     templatesdatagateway.h \
     selectway.h \
     viewport.h \
-    infowindow.h\
-    printtask.h
+    infowindow.h \
+    printtask.h \
+    prnsenddlg.h
 SOURCES += main.cpp \
     $${GLOBAL_DIR}/message.cpp \
     $${GLOBAL_DIR}/networkclient.cpp \
     $${GLOBAL_DIR}/myscene.cpp \
-    $${GLOBAL_DIR}/mytextitem.cpp \           
+    $${GLOBAL_DIR}/mytextitem.cpp \
     $${GLOBAL_DIR}/picitem.cpp \
     mainwindow.cpp \
     intropage.cpp \
@@ -79,7 +79,8 @@ SOURCES += main.cpp \
     selectway.cpp \
     viewport.cpp \
     infowindow.cpp \
-    printtask.cpp
-    
+    printtask.cpp \
+    prnsenddlg.cpp
 RESOURCES = images.qrc
 TRANSLATIONS = client_prn_ru.ts
+FORMS += prnsenddlg.ui
