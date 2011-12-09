@@ -202,9 +202,15 @@ enum MessageType {
 
     Cmd_SaveUserToBase  = 9011,
     Ans_userListSavedToBase = 9012,
+
+    Cmd_SavePrinterToBase= 9013,
+    Ans_printerListSavedToBase = 9014,
+
+
     Que_AuthUser        = 9100,
     Ans_AuthPassed      = 9101,
     Ans_AuthFailed      = 9102,
+
 
     Ans_StampList       = 9110,
     Ans_PrinterList     = 9111,
@@ -212,6 +218,8 @@ enum MessageType {
     Que_CheckDocInBase  = 9200,
     Ans_CheckDocInBase  = 9210,
 
+    Que_PrintThisFile   = 9220,
+    Ans_PrintThisFile   = 9221,
 
     ///Служебные сообщения
     Cmd_FinishWork      = 70000,        /// Команда удаленому клиенту завершить работу
