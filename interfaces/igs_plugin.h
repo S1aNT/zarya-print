@@ -7,6 +7,7 @@ using namespace VPrn;
 QT_FORWARD_DECLARE_CLASS(QString)
 QT_FORWARD_DECLARE_CLASS(QByteArray)
 
+#include <QMap>
 class Igs_plugin{
 
 public:
@@ -21,6 +22,8 @@ public:
     virtual void docMergedWithTemplate() =0;
     virtual void generatePreViewFinished() =0;
     virtual void convertPdf2Png(bool mode) = 0;
+    virtual QMap <int,QString > getOrderList(int p_copy) const = 0;
+
     virtual QStringList findFilesInDir(const QString &tDir, /* Каталог поиска*/
                                const QStringList &filters /*Тип файлов*/
                                ) const =0;
