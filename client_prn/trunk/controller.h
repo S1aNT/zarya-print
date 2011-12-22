@@ -38,6 +38,8 @@ public:
       * удаляем сгенерированный шаблон+ документ с наложенным шаблоном + файла предпросмотра
       */
     void clearPreViewFiles();
+    void convertTemplateToPdf();
+
 signals:
     void finishStep(VPrn::InitSteps step);
     void sendEventMessageInfo(QString eMsg,
@@ -50,9 +52,10 @@ signals:
     void setCardValid(bool);
 
     void showPrnState(QString);
-    void printNextCopy();
+    void needMarkDoc();
+
 public slots:
-    void beginPrintCurrentDoc();
+    void getNextCopy(int p_copy);
     void genFullPreView();
     void genPartPreView();
 
@@ -70,12 +73,6 @@ private slots:
     void docMergedWithTemplate();
     void generatePreViewFinished();
     void setReady4Print(){ready4Print = true;}
-    /**
-      * @fn void itemChangedCardsModel(QStandardItem* item);
-      * @brief При изменении элемента ячейки происходит проверка, что
-      * колонка модели  ==  id гриф секретности
-      * в ячеку записывается текстовое название грифа секретности
-      */
     void itemChangedCardsModel(QStandardItem* item);
 
 private:
@@ -98,6 +95,7 @@ private:
     QString localTDir;
     QString globalTDir;
     bool ready4Print;
+    int preViewMode;
 
 
     QString workFile;
@@ -117,7 +115,7 @@ private:
     QString currentStamp;
     QString currentTemplate;
     QString workingDir;
-    int preViewMode;
+
 
 
 

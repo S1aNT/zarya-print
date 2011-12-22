@@ -10,79 +10,25 @@
 
 
 Controller::Controller(QObject*parent)
-    :QObject(parent)
-    , myGs_plugin(0)
-    , myAuth_plugin(0)
-    , m_netClient(0)
-    , tDataGW(0)
-    , serverName(QString())
-    , serverPort(-1)
-    , gsBin(QString())
-    , pdftkBin(QString())
-    , spoolDir(QString())
-    , localTDir(QString())
-    , globalTDir(QString())
-    , ready4Print(false)
-
-
+        :QObject(parent)
+        , myGs_plugin(0)
+        , myAuth_plugin(0)
+        , m_netClient(0)
+        , tDataGW(0)
+        , serverName(QString())
+        , serverPort(-1)
+        , gsBin(QString())
+        , pdftkBin(QString())
+        , spoolDir(QString())
+        , localTDir(QString())
+        , globalTDir(QString())
+        , ready4Print(false)
+        , preViewMode(2)
 {
     stampListModel = new QStringListModel(this);
     pictureListModel= new QStringListModel(this);
 
     cardModel = new QStandardItemModel(this);
-    /// @todo Заголовок нужен только на время отладки
-
-#ifdef D_MYDEBUG
-    cardModel->setHorizontalHeaderItem( VPrn::cards_ID,
-                                        new QStandardItem(QObject::trUtf8("ID")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_DOC_NAME,
-                                        new QStandardItem(QObject::trUtf8("Имя документа")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_STAMP,
-                                        new QStandardItem(QObject::trUtf8("Гриф")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_MB_NUMBER,
-                                        new QStandardItem(QObject::trUtf8("Номер МБ")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PUNKT,
-                                        new QStandardItem(QObject::trUtf8("Пункт")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PAGE_COUNT,
-                                        new QStandardItem(QObject::trUtf8("Число страниц")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_COPY_COUNT,
-                                        new QStandardItem(QObject::trUtf8("Всего экз")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_CURRENT_COPY,
-                                        new QStandardItem(QObject::trUtf8("Текущий экз")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_TEMPLATE_NAME,
-                                        new QStandardItem(QObject::trUtf8("Имя файла шаблона")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_EXECUTOR,
-                                        new QStandardItem(QObject::trUtf8("Исполнитель")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PRINTMAN,
-                                        new QStandardItem(QObject::trUtf8("Отпечатал")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PHONE,
-                                        new QStandardItem(QObject::trUtf8("Телефон")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_INV_NUMBER,
-                                        new QStandardItem(QObject::trUtf8("Инв.номер")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PRINT_DATE,
-                                        new QStandardItem(QObject::trUtf8("Дата печати")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_RECIVER_1,
-                                        new QStandardItem(QObject::trUtf8("Получатель_1")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_RECIVER_2,
-                                        new QStandardItem(QObject::trUtf8("Получатель_2")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_RECIVER_3,
-                                        new QStandardItem(QObject::trUtf8("Получатель_3")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_RECIVER_4,
-                                        new QStandardItem(QObject::trUtf8("Получатель_4")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_RECIVER_5,
-                                        new QStandardItem(QObject::trUtf8("Получатель_5")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_STATUS,
-                                        new QStandardItem(QObject::trUtf8("Статус документа")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_CNV2PDF,
-                                        new QStandardItem(QObject::trUtf8("Конвертирован в pdf")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_TEMPLATE_NAME,
-                                        new QStandardItem(QObject::trUtf8("Шаблон")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_PRINTER_NAME,
-                                        new QStandardItem(QObject::trUtf8("Принтер")));
-    cardModel->setHorizontalHeaderItem( VPrn::cards_STAMP_NAME,
-                                        new QStandardItem(QObject::trUtf8("Значение грифа секр.")));
-#endif
-
     // Создадим запись - карточку документа именно с ней и будет работать клиент
     cardModel->setItem(0,VPrn::cards_STATUS,new QStandardItem(QObject::trUtf8("CREATE")));
 
@@ -96,10 +42,7 @@ Controller::Controller(QObject*parent)
     printerModel->setHorizontalHeaderItem( VPrn::printer_Name,
                                            new QStandardItem(QObject::trUtf8("Название принтера")));
 
-
-
     templatesModel = new QStandardItemModel(this);
-
 
     tDataGW = new TemplatesDataGateway(this);
     tDataGW->setTmplModel(templatesModel);
@@ -147,52 +90,6 @@ bool Controller::init(const QString &app_dir,const QString &wFile)
 
                 tDataGW->getMetaInfo(templatesList);
 
-#ifdef MY_DEBUG_OFF
-                cardModel->setItem(0, VPrn::cards_ID,
-                                   new QStandardItem(QObject::trUtf8("ID")));
-                cardModel->setItem(0, VPrn::cards_DOC_NAME,
-                                   new QStandardItem(QObject::trUtf8("Имя документа")));
-                cardModel->setItem(0, VPrn::cards_STAMP,
-                                   new QStandardItem(QObject::trUtf8("Гриф")));
-                cardModel->setItem(0, VPrn::cards_MB_NUMBER,
-                                   new QStandardItem(QObject::trUtf8("Номер МБ")));
-                cardModel->setItem(0, VPrn::cards_PUNKT,
-                                   new QStandardItem(QObject::trUtf8("Пункт")));
-                cardModel->setItem(0, VPrn::cards_PAGE_COUNT,
-                                   new QStandardItem(QObject::trUtf8("Число страниц")));
-                cardModel->setItem(0, VPrn::cards_COPY_COUNT,
-                                   new QStandardItem(QObject::trUtf8("Всего экз")));
-                cardModel->setItem(0, VPrn::cards_CURRENT_COPY,
-                                   new QStandardItem(QObject::trUtf8("Текущий экз")));
-                cardModel->setItem(0, VPrn::cards_TEMPLATE_NAME,
-                                   new QStandardItem(QObject::trUtf8("Имя файла шаблона")));
-                cardModel->setItem(0, VPrn::cards_EXECUTOR,
-                                   new QStandardItem(QObject::trUtf8("Исполнитель")));
-                cardModel->setItem(0, VPrn::cards_PRINTMAN,
-                                   new QStandardItem(QObject::trUtf8("Отпечатал")));
-                cardModel->setItem(0, VPrn::cards_PHONE,
-                                   new QStandardItem(QObject::trUtf8("Телефон")));
-                cardModel->setItem(0, VPrn::cards_INV_NUMBER,
-                                   new QStandardItem(QObject::trUtf8("Инв.номер")));
-                cardModel->setItem(0, VPrn::cards_PRINT_DATE,
-                                   new QStandardItem(QObject::trUtf8("Дата печати")));
-                cardModel->setItem(0, VPrn::cards_RECIVER_1,
-                                   new QStandardItem(QObject::trUtf8("Получатель_1")));
-                cardModel->setItem(0, VPrn::cards_RECIVER_2,
-                                   new QStandardItem(QObject::trUtf8("Получатель_2")));
-                cardModel->setItem(0, VPrn::cards_RECIVER_3,
-                                   new QStandardItem(QObject::trUtf8("Получатель_3")));
-                cardModel->setItem(0, VPrn::cards_RECIVER_4,
-                                   new QStandardItem(QObject::trUtf8("Получатель_4")));
-                cardModel->setItem(0, VPrn::cards_RECIVER_5,
-                                   new QStandardItem(QObject::trUtf8("Получатель_5")));
-                cardModel->setItem(0, VPrn::cards_STATUS,
-                                   new QStandardItem(QObject::trUtf8("Статус документа")));
-                cardModel->setItem(0, VPrn::cards_CNV2PDF,
-                                   new QStandardItem(QObject::trUtf8("Конвертирован в pdf")));
-                tDataGW->setWorkingDir( "/var/spool/zarya");
-                tDataGW->prepareTemplate("/opt/zarya/g_templates/test_1.tmpl");
-#endif
                 ok &= this->loadPlugins() ;
                 if (ok){
                     myAuth_plugin->init();
@@ -204,62 +101,59 @@ bool Controller::init(const QString &app_dir,const QString &wFile)
     return ok;
 }
 
-
 void Controller::clearPreViewFiles()
 {
-    /// @todo Запрос к плагину gs_plugin за спискои фалови их рекурсивное удаление
+    /// @todo Запрос к плагину gs_plugin за спискои файлов и их рекурсивное удаление
+}
 
+void Controller::convertTemplateToPdf()
+{
+    tDataGW->prepareTemplate(currentTemplate);
 }
 
 //------------------------- Public slots  --------------------------------------
 
-void Controller::beginPrintCurrentDoc()
+void Controller::getNextCopy(int p_copy)
 {
-    /** @todo Как остановить процесс печати?  */
-    QMap <int,QString> orderList;
-
-    for (int p_copy=VPrn::FirstPage; p_copy <= VPrn::FirstPageN5;p_copy++){
-        orderList = myGs_plugin->getOrderList(p_copy);
-        if (!orderList.isEmpty()){
-            emit showPrnState(QObject::trUtf8("Начата печать экземпляра №%1").arg(p_copy,0,10));
-
-            QMapIterator<int, QString> i(orderList);
-            int pages =cardModel->data( cardModel->index(0,VPrn::cards_PAGE_COUNT), Qt::EditRole).toInt();
-            int copy =1;
-            QString infoStr;
-            while (i.hasNext()) {
-                i.next();
-                //qDebug() << i.key() << ": " << i.value();
-                switch (i.key()){
-                case 1:
-                    infoStr = QObject::trUtf8("Лицевая сторона первого листа отправлена на печать");
-
-                    break;
-                case 3:
-                    infoStr = QObject::trUtf8("Лицевая сторона последующих листов отправлена на печать");
-                    if (pages >1){
-                        copy = pages -1;
-                    }
-                    break;
-                case 5:
-                    infoStr = QObject::trUtf8("Обратная сторона документа отправлена на печать");
-                    if (pages >1){
-                        copy = pages -1;
-                    }
-                    break;
-                case 7:
-                    infoStr = QObject::trUtf8("Фонарик отправлен на печать");
-                    break;
-                default:
-                    break;
-                }
-                if (!infoStr.isEmpty() && QFile::exists( i.value())){
-                    emit showPrnState(infoStr);
-                    this->printThisFile( i.value(),copy);
-                }
-            }
-            emit showPrnState(QObject::trUtf8("Окончена печать экземпляра №%1").arg(p_copy,0,10));
+    QMap <int,QString> orderList = myGs_plugin->getOrderList(p_copy);
+    if (!orderList.isEmpty()){
+        int copy = cardModel->data( cardModel->index(0,VPrn::cards_PAGE_COUNT), Qt::EditRole).toInt();
+        if (copy <1){
+            emit showPrnState(QObject::trUtf8("В исходном документе ошибка, число страниц не может быть < 0."));
+            return;
         }
+        if ( copy > 1 ){
+            copy--;
+        }
+
+        emit showPrnState(QObject::trUtf8("Начата печать экземпляра №%1").arg(p_copy,0,10));
+        QMapIterator<int, QString> i(orderList);
+        QString infoStr;
+        while (i.hasNext()) {
+            i.next();
+            switch (i.key()){
+            case 0:
+                infoStr = QObject::trUtf8("Лицевая сторона первого листа отправлена на печать");
+                break;
+            case 1:
+                infoStr = QObject::trUtf8("Лицевая сторона последующих листов отправлена на печать");
+                break;
+            case 2:
+                infoStr = QObject::trUtf8("Обратная сторона документа отправлена на печать");
+                break;
+            case 3:
+                infoStr = QObject::trUtf8("Фонарик отправлен на печать");
+                break;
+            default:
+                break;
+            }
+            if (!infoStr.isEmpty() && QFile::exists( i.value())){
+                emit showPrnState(infoStr);
+                this->printThisFile( i.value(),copy);
+            }
+        }
+        emit showPrnState(QObject::trUtf8("Окончена печать экземпляра №%1").arg(p_copy,0,10));
+        emit needMarkDoc();
     }
 }
 
@@ -271,17 +165,14 @@ void Controller::genFullPreView()
       *@li Первые страницы + последующие документа объединенный в один файл (опционально)
       *@li Обратные страницы документа (опционально)
       *@li Фонарик документа (опционально)
-      */
-    tDataGW->prepareTemplate(currentTemplate);
+      */    
     preViewMode = 1;
 }
 
 void Controller::genPartPreView()
-{
-    tDataGW->prepareTemplate(currentTemplate);
+{        
     preViewMode = 2;
 }
-
 
 //------------------------- Private slots --------------------------------------
 void Controller::parseNetworkMessage(const Message & msg)
@@ -352,7 +243,6 @@ void Controller::docReady4work(qint32 pCount)
       * @todo Возникает странное как только выполняется setItem модель очищается
       * т.е те значения которые ввел пользолватель пропадают
       */
-
     cardModel->setItem(0,VPrn::cards_PAGE_COUNT,new QStandardItem(QObject::trUtf8("%1").arg(pCount,0,10)));
 }
 
@@ -363,6 +253,9 @@ void Controller::docConvertedToPdf()
 
 void Controller::docMergedWithTemplate()
 {
+     /** @todo  Этому место в плагине, так как режим предпросмотра задается,
+       * там же можно и определять нужно ли преобразование в картинки
+       */
     switch (preViewMode){
     case 1:
         myGs_plugin->convertPdf2Png(true);
@@ -375,9 +268,13 @@ void Controller::docMergedWithTemplate()
 
 void Controller::generatePreViewFinished()
 {
+    /** @todo Вынести в плагин всю логику обхода каталогов, возвращать только QStringList
+      * содержащий список файлов
+      */
     QStringList pic_files;
     for (int p_copy=VPrn::FirstPage; p_copy <= VPrn::FirstPageN5;p_copy++){
         QString copy_dir = QObject::trUtf8("%1/%2-copy").arg(workingDir).arg(p_copy,0,10);
+
 #if QT_VERSION > 0x040402
         pic_files.append( myGs_plugin->findFilesInDir(copy_dir,QStringList()<<"*.png") );
 #else
@@ -391,8 +288,8 @@ void Controller::generatePreViewFinished()
 
 void Controller::itemChangedCardsModel(QStandardItem* item)
 {
+    /** @todo Проверить необходимость этих переменных, данные можно брать из модели */
     QModelIndex idx = cardModel->indexFromItem(item);
-    qDebug() << Q_FUNC_INFO <<" idx= " << idx;
     if (idx.isValid()){
         int comboBoxId = cardModel->data(idx,Qt::EditRole).toInt();
         if (comboBoxId != -1){
@@ -462,9 +359,9 @@ bool Controller::readConfig(const QString &app_dir)
     QDir testDir;
 
     bool ok = !serverName.isEmpty() &&  !serverPort !=-1 &&
-            QFile::exists(gsBin) && QFile::exists(pdftkBin) &&
-            testDir.exists(spoolDir) && testDir.exists(localTDir) &&
-            testDir.exists(globalTDir);
+              QFile::exists(gsBin) && QFile::exists(pdftkBin) &&
+              testDir.exists(spoolDir) && testDir.exists(localTDir) &&
+              testDir.exists(globalTDir);
 
     if (ok){
         return true;
@@ -487,7 +384,7 @@ bool Controller::loadPlugins()
 
 
     if (pluginsDir.dirName().toLower() == "debug" ||
-            pluginsDir.dirName().toLower() == "release")
+        pluginsDir.dirName().toLower() == "release")
         pluginsDir.cdUp();
 
 #if defined(Q_OS_MAC)
@@ -651,13 +548,13 @@ qint32 Controller::getCompresedFile(const QString &fileName,
     data.clear();
 
     QFile file_in(fileName);
-
     if (!file_in.open(QIODevice::ReadOnly) ){
         return 0;
     }
-    QByteArray byteArray_in = file_in.readAll();
+    data = qCompress( file_in.readAll() );
     file_in.close();
-    data = qCompress(byteArray_in);
+//    QByteArray byteArray_in = file_in.readAll();
+//    data = qCompress(byteArray_in);
     /** @todo возможна ошибка так как файл может быть qint64 а буфер не больше int*/
     return data.size();
 }
