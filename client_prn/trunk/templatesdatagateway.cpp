@@ -15,11 +15,11 @@
 //#include <QTableView>
 
 TemplatesDataGateway::TemplatesDataGateway(QObject *parent)
-    : QObject(parent)
-    , t_model(0)
-    , card_model(0)
-    , pages_model(0)
-    , sqlDrvLoad(false)
+        : QObject(parent)
+        , t_model(0)
+        , card_model(0)
+        , pages_model(0)
+        , sqlDrvLoad(false)
 {
     // Инициализация БД, проверка наличия требуемого драйвера
     QSqlDatabase db  = QSqlDatabase::addDatabase(QLatin1String("QSQLITE"),
@@ -150,10 +150,10 @@ void TemplatesDataGateway::readMeta(const QString &fileName)
         QSqlQuery query(db);
         QList<QStandardItem *> itemList;
         if (query.exec( "SELECT t_name,t_desc,"
-                       "angle,c_time,m_time,author,margin_top,margin_bottom,"
-                       "margin_left,margin_right,page_size.p_width,page_size.p_height  "
-                       "FROM template "
-                       " INNER JOIN page_size ON template.page_size_id=page_size.id")){
+                        "angle,c_time,m_time,author,margin_top,margin_bottom,"
+                        "margin_left,margin_right,page_size.p_width,page_size.p_height  "
+                        "FROM template "
+                        " INNER JOIN page_size ON template.page_size_id=page_size.id")){
 
             int field_t_name   = query.record().indexOf("t_name");
             int field_t_desc   = query.record().indexOf("t_desc");
@@ -344,12 +344,12 @@ bool TemplatesDataGateway::isCopyValid(int pCopy)
 
     qDebug() << "pCopy "    << pCopy;
     qDebug() << "card_model->data(idx,Qt::DisplayRole).toString() "
-             << card_model->data(idx,Qt::DisplayRole).toString();
+            << card_model->data(idx,Qt::DisplayRole).toString();
     qDebug() << "pages_model->data(idx,Qt::DisplayRole).toInt() = "
-             << pages_model->data(pages_idx,Qt::DisplayRole).toBool();
+            << pages_model->data(pages_idx,Qt::DisplayRole).toBool();
 
     bool ok = !card_model->data(idx,Qt::DisplayRole).toString().isEmpty() &&
-            pages_model->data(pages_idx,Qt::DisplayRole).toBool();
+              pages_model->data(pages_idx,Qt::DisplayRole).toBool();
 
     return ok;
 }
@@ -366,7 +366,7 @@ bool TemplatesDataGateway::updateElementsTable(const QString &m_tag, const QStri
     QSqlDatabase db  = QSqlDatabase::database(QLatin1String("TINFO_CON"),true);
     QSqlQuery query(db);
     QString q_str = QObject::trUtf8("UPDATE elem SET e_text='%1' WHERE img = 0 AND e_tag ='%2' ")
-            .arg(m_value,m_tag);
+                    .arg(m_value,m_tag);
     bool ok = query.exec( q_str );
     if (!ok){
         this->dumpError(query.lastError());
@@ -391,16 +391,7 @@ void TemplatesDataGateway::printPageToPdf(int pages_number,int angle,qreal width
         myScene *m_scene =new myScene(this);
         m_scene->createPageForPrint(width,height);
 
-        QPrinter pdfprinter;
-        pdfprinter.setOutputFileName(fileName);
-        pdfprinter.setFullPage(true);
-        pdfprinter.setOutputFormat( QPrinter::PdfFormat);
-        pdfprinter.setResolution( QPrinter::HighResolution );
-        if (angle == 90){
-            pdfprinter.setOrientation(QPrinter::Landscape);
-        }else{
-            pdfprinter.setOrientation(QPrinter::Portrait);
-        }
+
         int field_text        =  elrm_query.record().indexOf("e_text");
         int field_tag         =  elrm_query.record().indexOf("e_tag");
         int field_pos_x       =  elrm_query.record().indexOf("pos_x");
@@ -442,9 +433,19 @@ void TemplatesDataGateway::printPageToPdf(int pages_number,int angle,qreal width
             m_scene->setViewMode();
         }
 
+        QPrinter pdfprinter;
+        pdfprinter.setOutputFileName(fileName);
+        pdfprinter.setFullPage(true);
+        pdfprinter.setOutputFormat( QPrinter::PdfFormat);
+        pdfprinter.setResolution( QPrinter::HighResolution );
+        if (angle == 90){
+            pdfprinter.setOrientation(QPrinter::Landscape);
+        }else{
+            pdfprinter.setOrientation(QPrinter::Portrait);
+        }
         //Печать в pdf
         QPainter painter(&pdfprinter);
-        painter.setOpacity(0.0);
+        //painter.setOpacity(0.0);
         m_scene->render(&painter);
 
     }else{
