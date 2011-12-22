@@ -12,7 +12,7 @@
 #include "prnsenddlg.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent)
+        : QWidget(parent)
 {
     this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::MinimumExpanding);
     this->setWindowTitle(QObject::trUtf8("Управление принтерами в системе ЗАРЯ"));
@@ -89,7 +89,6 @@ MainWindow::MainWindow(QWidget *parent)
         this->setWindowTitle( QObject::trUtf8("Ошибка создания окон мастера") );
     }
 
-    this->connectAll();
 
     editCardPage->setPrinterModel( controller->getPrinterModel() );
     editCardPage->setCardModel(controller->getCardModel());
@@ -98,9 +97,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     preViewPage->setModel(controller->getPictureListModel());
 
-    //    QTableView *t = new QTableView();
-    //    t->setModel(controller->getCardModel());
-    //    t->show();
+    this->connectAll();
 }
 
 void MainWindow::init(const QString &app_dir,const QString &wFile)
@@ -183,10 +180,24 @@ void MainWindow::connectAll()
     connect(controller,SIGNAL(serverInfo(QString,QString)),
             this,SLOT(showInfo(QString,QString))
             );
+    connect (controller,SIGNAL(filnalPrint()),this,SLOT(close()) );
 
 }
 
+void MainWindow::showSelectWayDlg()
+{
+    controller->convertTemplateToPdf();
 
+    SelectWay * sWay = new SelectWay();
+    connect(sWay,SIGNAL(selPrint()),this,SLOT(beginPrint()));
+    connect(sWay,SIGNAL(selPreView()),controller,SLOT(genFullPreView()));
+    connect(sWay,SIGNAL(selPartPreView()),controller,SLOT(genPartPreView()));
+
+    if (sWay->exec() == QDialog::Accepted){
+        stackedWidget->setCurrentIndex(VPrn::page_Preview);
+        this->nextButton->setText(QObject::trUtf8("Печать"));
+    }
+}
 
 //------------------------------------------------ Private slots -------------------------------------------------
 void MainWindow::help()
@@ -196,43 +207,18 @@ void MainWindow::help()
 
 void MainWindow::do_next()
 {    
-    int pos = stackedWidget->currentIndex();
-
+    int pos = stackedWidget->currentIndex();    
     if (!nextButton->isEnabled()){
         return;
-    }
+    }    
+    nextButton->setEnabled(false);
 
     switch (pos){
     case VPrn::page_EditCard:
-        {
-            SelectWay * sWay = new SelectWay();
-
-            connect(sWay,SIGNAL(selPrint()),controller,SLOT(beginPrintCurrentDoc()));
-#ifdef D_MYDEBUG
-            connect(sWay,SIGNAL(selPrint()),this,SLOT(fakePrint()));
-#endif
-            connect(sWay,SIGNAL(selPreView()),controller,SLOT(genFullPreView()));
-            connect(sWay,SIGNAL(selPartPreView()),controller,SLOT(genPartPreView()));
-
-            if (sWay->exec() == QDialog::Accepted){
-                stackedWidget->setCurrentIndex(VPrn::page_Preview);
-                this->nextButton->setText(QObject::trUtf8("Печать"));
-            }
-
-        }
-
+        this->showSelectWayDlg();
         break;
     case VPrn::page_Preview:
-        {
-            PrnSendDlg *prnDlg = new PrnSendDlg(this);
-            connect (controller,SIGNAL(showPrnState(QString)),prnDlg,SLOT(showPrnState(QString)));
-            connect (controller,SIGNAL(printNextCopy()),prnDlg,SLOT(printNextCopy()));
-            controller->beginPrintCurrentDoc();
-            prnDlg->exec();
-        }
-#ifdef D_MYDEBUG_OLD
-        this->fakePrint();
-#endif
+        this->beginPrint();
         break;
     default:        
         break;
@@ -242,7 +228,7 @@ void MainWindow::do_next()
     if (pos > stackedWidget->count()){
         return;
     }
-    nextButton->setEnabled(false);
+
     stackedWidget->setCurrentIndex(pos);
 }
 
@@ -271,8 +257,6 @@ void MainWindow::enableNext()
     nextButton->setEnabled(true);
 }
 
-
-
 void MainWindow::showInfo(const QString &title,const QString &txt)
 {
     InfoWindow *info = new InfoWindow();
@@ -281,12 +265,14 @@ void MainWindow::showInfo(const QString &title,const QString &txt)
     info->exec();
 }
 
-#ifdef D_MYDEBUG_OLD
-void MainWindow::fakePrint()
+void MainWindow::beginPrint()
 {
-    QMessageBox msgbox;
-    msgbox.setText(QObject::trUtf8("Документ успешно распечатан."));
-    msgbox.exec();
-}
-#endif
+    this->hide();
+    PrnSendDlg *prnDlg = new PrnSendDlg(this);
+    connect (controller,SIGNAL(showPrnState(QString)),prnDlg,SLOT(showPrnState(QString)));
+    connect (controller,SIGNAL(needMarkDoc()),prnDlg,SLOT(do_needMarkDoc()));
+    connect (prnDlg,SIGNAL(getNextCopy(int)),controller,SLOT(getNextCopy(int)));
+    prnDlg->checkNextCopy();
+    prnDlg->exec();
 
+}

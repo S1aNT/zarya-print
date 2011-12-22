@@ -34,10 +34,7 @@ private slots:
     void do_restart();
     void enableNext();
     void showInfo(const QString &title,const QString &txt);
-
-#ifdef D_MYDEBUG_OLD
-    void fakePrint();
-#endif
+    void beginPrint();
 private:
 
     QDesktopWidget desktop;
@@ -61,7 +58,8 @@ private:
 
     QPoint calcDeskTopCenter(int width,int height);
 
-    void connectAll();
+    void connectAll();    
+    void showSelectWayDlg();
 
 };
 
