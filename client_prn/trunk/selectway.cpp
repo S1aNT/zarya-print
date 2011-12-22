@@ -82,4 +82,5 @@ void SelectWay::selectButton(int btn)
         break;
     }
     this->accept();
+    this->close();
 }
