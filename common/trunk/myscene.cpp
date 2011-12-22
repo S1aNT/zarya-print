@@ -22,21 +22,21 @@
 using namespace VPrn;
 
 myScene::myScene( QObject *parent )
-    : QGraphicsScene(parent)
-    , m_mode (true)
-    , m_angle(0.0)
-    , m_undoStack(0)
-    , m_Number(-1)
+        : QGraphicsScene(parent)
+        , m_mode (true)
+        , m_angle(0.0)
+        , m_undoStack(0)
+        , m_Number(-1)
 {
 
 }
 
 myScene::myScene(int Number, QUndoStack* undoStack, QObject *parent )
-    : QGraphicsScene(parent)
-    , m_mode (true)
-    , m_angle(0.0)
-    , m_undoStack(0)
-    , m_Number(-1)
+        : QGraphicsScene(parent)
+        , m_mode (true)
+        , m_angle(0.0)
+        , m_undoStack(0)
+        , m_Number(-1)
 {
     // initialise variables
     m_undoStack     = undoStack;
@@ -55,6 +55,7 @@ void  myScene::createPageForPrint(qreal width,qreal height)
 {
     this->clear();
     this->setSceneRect(0, 0, width,height);
+    /*
     this->setBackgroundBrush(Qt::white);
 
     QPixmap pixmap = QPixmap(int (width),int(height));
@@ -65,6 +66,16 @@ void  myScene::createPageForPrint(qreal width,qreal height)
     paper_rect->setData(ObjectName, "Paper");
     paper_rect->setZValue(-1000.0);
     paper_rect->setShapeMode(QGraphicsPixmapItem::HeuristicMaskShape);
+    this->addItem(paper_rect);
+*/
+    this->setBackgroundBrush(Qt::transparent);
+
+    QGraphicsRectItem *paper_rect = new QGraphicsRectItem (QRectF(0,0, width,height));
+    paper_rect->setPen(QPen(Qt::black));
+    paper_rect->setBrush(QBrush(Qt::red));
+    //paper_rect->setZValue(-1000.0);
+    paper_rect->setData(ObjectName, "Paper");
+
     this->addItem(paper_rect);
 }
 
