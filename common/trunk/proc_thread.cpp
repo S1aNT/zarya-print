@@ -48,6 +48,7 @@ void ProcessT::run()
     qDebug() << "m_Args\n" << m_Args << "\n";
     proc.start( m_Command, m_Args );
 #elif defined(Q_OS_WIN)    
+
     QFile t_file;
     QString tmp_cmd;
     {
@@ -70,6 +71,8 @@ void ProcessT::run()
     }
     QTextStream out(&t_file);
     if (t_file.open(QIODevice::WriteOnly)){
+        m_Command.replace("/","\\");
+
         out << QObject::tr("@echo off\n");
         if (m_Command.contains(" ") ){
             out << QObject::tr("\"%1\" ").arg(m_Command);
