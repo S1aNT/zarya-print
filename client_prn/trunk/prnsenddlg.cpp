@@ -1,18 +1,25 @@
 #include "prnsenddlg.h"
 #include "ui_prnsenddlg.h"
+#include "mytypes.h"
+using namespace VPrn;
 
 PrnSendDlg::PrnSendDlg(QWidget *parent)
-    :QDialog(parent)
-    ,m_ui(new Ui::PrnSendDlg)
-    ,m_copy(0)
+        :QDialog(parent)
+        ,m_ui(new Ui::PrnSendDlg)
+        ,m_copy(1)
 {
     m_ui->setupUi(this);
-    connect(m_ui->clearButton,SIGNAL(clicked()),this,SIGNAL(clearDoc())
-            );
-    connect(m_ui->dirtyButton,SIGNAL(clicked()),this,SIGNAL(dirtyDoc())
-            );
-    connect(m_ui->clearButton,SIGNAL(clicked()),this,SLOT(disableButtons()));
-    connect(m_ui->dirtyButton,SIGNAL(clicked()),this,SLOT(disableButtons()));
+    m_ui->progressBar->setRange(1,5);
+
+    signalMapper = new QSignalMapper(this);
+
+    connect(m_ui->clearButton, SIGNAL(clicked()), signalMapper, SLOT(map()));
+    connect(m_ui->dirtyButton, SIGNAL(clicked()), signalMapper, SLOT(map()));
+
+    signalMapper->setMapping(m_ui->clearButton, 0);
+    signalMapper->setMapping(m_ui->dirtyButton, 1);
+
+    connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(do_clicked(int)));    
 }
 
 PrnSendDlg::~PrnSendDlg()
@@ -20,26 +27,22 @@ PrnSendDlg::~PrnSendDlg()
     delete m_ui;
 }
 
+void PrnSendDlg::checkNextCopy()
+{
+    if (m_copy <VPrn::FirstPageN5){
+        m_ui->progressBar->setValue(m_copy);
+        emit getNextCopy(m_copy);
+    }
+}
+
 void PrnSendDlg::showPrnState(const QString &info)
 {
-   m_ui->plainTextEdit->appendPlainText(info);
+    m_ui->plainTextEdit->appendPlainText(info);
 }
 
-void PrnSendDlg::printNextCopy()
+void PrnSendDlg::do_needMarkDoc()
 {
-    m_copy++;
-    m_ui->progressBar->setValue(m_copy);
-}
-
-void PrnSendDlg::enableButtons()
-{
-    m_ui->clearButton->setEnabled(true);
-    m_ui->dirtyButton->setEnabled(true);
-}
-void PrnSendDlg::disableButtons()
-{
-    m_ui->clearButton->setEnabled(false);
-    m_ui->dirtyButton->setEnabled(false);
+    this->setButtons(true);
 }
 
 void PrnSendDlg::changeEvent(QEvent *e)
@@ -53,3 +56,29 @@ void PrnSendDlg::changeEvent(QEvent *e)
         break;
     }
 }
+
+void PrnSendDlg::do_clicked(int btn)
+{
+    switch (btn){
+    case 0:
+        emit clearDoc();
+        break;
+    case 1:
+        emit dirtyDoc();
+        break;
+    default:
+        break;
+    }
+    m_copy++;
+    this->checkNextCopy();
+
+    this->setButtons(false);
+}
+
+void PrnSendDlg::setButtons(bool state)
+{
+    m_ui->clearButton->setEnabled(state);
+    m_ui->dirtyButton->setEnabled(state);
+}
+
+
