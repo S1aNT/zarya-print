@@ -79,12 +79,6 @@ QMap <int,QString > GS_plugin::getOrderList(int p_copy) const
 
     if (t_files.count() !=-1){
         // Формируем задание для данного экземпляра
-        orderList.insert(0,QString("111"));
-        orderList.insert(2,QString("222"));
-        orderList.insert(4,QString("333"));
-        orderList.insert(6,QString("444"));
-        orderList.insert(8,QString("555"));
-
         for (int i=0; i< t_files.size();i++){
             QString in_file = t_files.at(i);
             QRegExp rx("/(.+)/(.+)/(.)-copy/(.+_out).pdf");;
@@ -93,16 +87,16 @@ QMap <int,QString > GS_plugin::getOrderList(int p_copy) const
                 //copy_num   = rx.cap(3);
                 QString page_type  = rx.cap(4);
                 if ( page_type.compare("firstpage_out",Qt::CaseInsensitive) == 0){
-                    orderList.insert(1,in_file);
+                    orderList.insert(0,in_file);
                 }
                 if ( page_type.compare("otherpage_out",Qt::CaseInsensitive) == 0){
-                    orderList.insert(3,in_file);
+                    orderList.insert(1,in_file);
                 }
                 if ( page_type.compare("oversidepage_out",Qt::CaseInsensitive) == 0){
-                    orderList.insert(5,in_file);
+                    orderList.insert(2,in_file);
                 }
                 if ( page_type.compare("lastpage_out",Qt::CaseInsensitive) == 0){
-                    orderList.insert(7,in_file);
+                    orderList.insert(3,in_file);
                 }
             }
         }
